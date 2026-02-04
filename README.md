@@ -130,13 +130,13 @@ You can now access the API documentation at [http://127.0.0.1:8000/docs](http://
 
 ## 5. Roadmap
 
-### Phase 1: Backend MVP (In Progress)
+### Phase 1: Backend MVP (Completed)
 -   [x] Upload multiple images.
 -   [x] Compute blur score (Laplacian variance).
--   [ ] Compute exposure score (mean brightness).
--   [ ] Normalize scores to a 0–1 range.
--   [ ] Compute a weighted `final_score`.
--   [ ] Add `recommendation` field (`Keep`/`Review`/`Delete`).
+-   [x] Compute exposure score (mean brightness).
+-   [x] Normalize scores to a 0–1 range.
+-   [x] Compute a weighted `final_score`.
+-   [x] Add `recommendation` field (`Keep`/`Review`/`Delete`).
 
 ### Phase 2: Frontend MVP
 -   [ ] Create a mobile-first Vue interface.
