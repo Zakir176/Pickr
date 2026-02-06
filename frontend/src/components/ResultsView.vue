@@ -1,0 +1,313 @@
+<script setup>
+import { ChevronLeft, Wand2 } from 'lucide-vue-next';
+import StatusBadge from './StatusBadge.vue';
+import { computed } from 'vue';
+
+const props = defineProps({
+  results: {
+    type: Array,
+    default: () => []
+  }
+});
+
+const emit = defineEmits(['back', 'confirm', 'view-group']);
+
+// Computing Stats
+const totalPhotos = computed(() => props.results.length);
+const photosToDelete = computed(() => props.results.filter(r => r.recommendation === 'Delete').length);
+
+const getQualityLabel = (score) => {
+  if (score > 0.8) return 'High Quality';
+  if (score > 0.5) return 'Med Quality';
+  return 'Low Quality';
+};
+
+// --- Mocking Grouping for UI Demo ---
+// Since backend is flat, we'll group simply by recommendation for now
+// to simulate the "Similar Set" look from the design.
+const groupedResults = computed(() => {
+  const groups = [];
+  
+  // Group 1: High Quality / Keep
+  const keep = props.results.filter(r => r.recommendation === 'Keep');
+  if (keep.length > 0) {
+    groups.push({ title: `Best Shots (${keep.length} items)`, items: keep });
+  }
+  
+  // Group 2: Review
+  const review = props.results.filter(r => r.recommendation === 'Review');
+  if (review.length > 0) {
+    groups.push({ title: `Needs Review (${review.length} items)`, items: review });
+  }
+
+  // Group 3: Delete (Low Quality)
+  const del = props.results.filter(r => r.recommendation === 'Delete');
+  if (del.length > 0) {
+    groups.push({ title: `Low Quality / Duplicates (${del.length} items)`, items: del });
+  }
+  
+  return groups;
+});
+
+const handleBulkAction = () => {
+  // By default, open the "Review" group for bulk actions, or the first group if it doesn't exist
+  const reviewGroup = groupedResults.value.find(g => g.title.includes('Review'));
+  if (reviewGroup) {
+    emit('view-group', reviewGroup);
+  } else if (groupedResults.value.length > 0) {
+    emit('view-group', groupedResults.value[0]);
+  }
+};
+</script>
+
+<template>
+  <div class="results-view">
+    <!-- Header -->
+    <header class="top-bar">
+      <button class="icon-btn" @click="$emit('back')">
+        <ChevronLeft :size="24" />
+      </button>
+      <h1>Curation Results</h1>
+      <button class="text-btn" @click="handleBulkAction">Bulk Action</button>
+    </header>
+
+    <div class="scroll-content">
+      <!-- Summary Cards -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <span class="label">PHOTOS ANALYZED</span>
+          <span class="value">{{ totalPhotos }}</span>
+        </div>
+        <div class="stat-card">
+          <span class="label">TO DELETE</span>
+          <span class="value red">{{ photosToDelete }}</span>
+        </div>
+      </div>
+
+      <!-- Groups -->
+      <div v-for="(group, idx) in groupedResults" :key="idx" class="group-section">
+        <div class="group-header clickable" @click="$emit('view-group', group)">
+          <h3>{{ group.title }}</h3>
+          <span class="sub-text" v-if="idx===0">Best match selected</span>
+        </div>
+
+        <div class="photo-grid">
+          <div v-for="(item, i) in group.items" :key="i" class="photo-card">
+            <img v-if="item.blobUrl" :src="item.blobUrl" class="photo-img" alt="Analyzed photo" />
+            <div v-else class="img-placeholder">
+               <span class="filename">{{ item.filename }}</span>
+            </div>
+            
+            <!-- Badge Overlay -->
+            <div class="badge-overlay">
+              <StatusBadge
+                :status="item.error ? 'Error' : item.recommendation"
+                :error-message="item.error"
+              />
+            </div>
+            
+            <!-- Quality Label -->
+            <div class="quality-overlay">
+              <StatusBadge :status="getQualityLabel(item.final_score)" type="label" />
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Safe space for bottom button -->
+      <div class="spacer-bottom"></div>
+    </div>
+
+    <!-- Bottom Action Bar -->
+    <div class="bottom-action-bar">
+      <button class="confirm-btn" @click="$emit('confirm')">
+        <Wand2 :size="20" />
+        <span>Confirm {{ photosToDelete }} Deletions</span>
+      </button>
+      <p class="disclaimer">All deleted photos will be moved to Recently Deleted in your Photos app.</p>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.results-view {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--bg-gray);
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background-color: var(--white);
+  border-bottom: 1px solid #E5E7EB;
+}
+
+h1 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.text-btn {
+  color: var(--primary-blue);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.scroll-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+/* Stats */
+.stats-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  flex: 1;
+  background: var(--white);
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.value {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.value.red {
+  color: #EF4444;
+}
+
+/* Groups */
+.group-section {
+  margin-bottom: 32px;
+}
+
+.group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 12px;
+}
+
+.group-header.clickable {
+  cursor: pointer;
+}
+
+h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.sub-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* Grid */
+.photo-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* 2 columns */
+  gap: 12px;
+}
+
+.photo-card {
+  position: relative;
+  aspect-ratio: 1; /* Square */
+  background-color: #E5E7EB;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.img-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #D1D5DB;
+  color: #6B7280;
+  font-size: 10px;
+  word-break: break-all;
+  padding: 8px;
+}
+
+.badge-overlay {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.quality-overlay {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+}
+
+.spacer-bottom {
+  height: 100px;
+}
+
+/* Bottom Bar */
+.bottom-action-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px 16px 32px;
+  background: var(--white);
+  border-top: 1px solid #E5E7EB;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.confirm-btn {
+  background-color: var(--primary-blue);
+  color: white;
+  padding: 14px;
+  border-radius: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.disclaimer {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+</style>
