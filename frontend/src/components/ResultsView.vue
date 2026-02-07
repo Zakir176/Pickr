@@ -1,7 +1,7 @@
 <script setup>
-import { ChevronLeft, Wand2 } from 'lucide-vue-next';
+import { ChevronLeft, Wand2, ChevronDown, Download } from 'lucide-vue-next'; // Import Download
 import StatusBadge from './StatusBadge.vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue'; // Import ref
 
 const props = defineProps({
   results: {
@@ -11,6 +11,23 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['back', 'confirm', 'view-group']);
+
+// Local state for collapsed groups
+const collapsedGroups = ref({}); // { 'Group Title': true/false }
+
+const toggleGroup = (groupTitle) => {
+  collapsedGroups.value[groupTitle] = !collapsedGroups.value[groupTitle];
+};
+
+// Function to handle photo download
+const downloadPhoto = (blobUrl, filename) => {
+  const link = document.createElement('a');
+  link.href = blobUrl;
+  link.download = filename || 'downloaded_image.png';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
 
 // Computing Stats
 const totalPhotos = computed(() => props.results.length);
@@ -53,10 +70,12 @@ const handleBulkAction = () => {
   // By default, open the "Review" group for bulk actions, or the first group if it doesn't exist
   const reviewGroup = groupedResults.value.find(g => g.title.includes('Review'));
   if (reviewGroup) {
-    emit('view-group', reviewGroup);
+    // emit('view-group', reviewGroup); // Temporarily disabling original behavior for collapse/expand MVP
   } else if (groupedResults.value.length > 0) {
-    emit('view-group', groupedResults.value[0]);
+    // emit('view-group', groupedResults.value[0]); // Temporarily disabling original behavior for collapse/expand MVP
   }
+  // For now, let's just log this action
+  console.log("Bulk Action Clicked, but original view-group behavior is temporarily disabled for MVP collapse/expand");
 };
 </script>
 
@@ -86,18 +105,26 @@ const handleBulkAction = () => {
 
       <!-- Groups -->
       <div v-for="(group, idx) in groupedResults" :key="idx" class="group-section">
-        <div class="group-header clickable" @click="$emit('view-group', group)">
+        <div class="group-header clickable" @click="toggleGroup(group.title)">
           <h3>{{ group.title }}</h3>
-          <span class="sub-text" v-if="idx===0">Best match selected</span>
+          <div class="group-header-right">
+            <span class="sub-text" v-if="idx===0">Best match selected</span>
+            <ChevronDown :class="{ 'rotate-180': collapsedGroups[group.title] }" :size="20" class="chevron-icon" />
+          </div>
         </div>
 
-        <div class="photo-grid">
+        <div v-if="!collapsedGroups[group.title]" class="photo-grid">
           <div v-for="(item, i) in group.items" :key="i" class="photo-card">
             <img v-if="item.blobUrl" :src="item.blobUrl" class="photo-img" alt="Analyzed photo" />
             <div v-else class="img-placeholder">
                <span class="filename">{{ item.filename }}</span>
             </div>
             
+            <!-- Download Button -->
+            <button v-if="item.blobUrl" class="download-btn" @click.stop="downloadPhoto(item.blobUrl, item.filename)">
+              <Download :size="16" color="white" />
+            </button>
+
             <!-- Badge Overlay -->
             <div class="badge-overlay">
               <StatusBadge
@@ -207,7 +234,7 @@ h1 {
 .group-header {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center; /* Changed from baseline to center for vertical alignment with chevron */
   margin-bottom: 12px;
 }
 
@@ -221,9 +248,23 @@ h3 {
   color: var(--text-primary);
 }
 
+.group-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* Spacing between sub-text and chevron */
+}
+
 .sub-text {
   font-size: 12px;
   color: var(--text-secondary);
+}
+
+.chevron-icon {
+  transition: transform 0.2s ease; /* Smooth rotation */
+}
+
+.rotate-180 {
+  transform: rotate(180deg);
 }
 
 /* Grid */
@@ -271,6 +312,23 @@ h3 {
   position: absolute;
   bottom: 8px;
   left: 8px;
+}
+
+.download-btn {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10; /* Ensure it's above other elements */
+  border: none;
+  padding: 0;
 }
 
 .spacer-bottom {

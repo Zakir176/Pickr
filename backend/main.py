@@ -15,15 +15,20 @@ IDEAL_EXPOSURE = 127.5
 IDEAL_CONTRAST = 60.0       # Standard deviation of ~60 is good contrast
 IDEAL_COLORFULNESS = 40.0   # Hasler metric around 40 is vibrant
 
-# --- Constants for Scoring ---
-BLUR_WEIGHT = 0.4
-EXPOSURE_WEIGHT = 0.3
-CONTRAST_WEIGHT = 0.2
-COLOR_WEIGHT = 0.1
-
 # --- Constants for Recommendations ---
 KEEP_THRESHOLD = 0.75
 REVIEW_THRESHOLD = 0.50
+
+# --- Scoring Configuration ---
+# These weights determine the importance of each metric in the final score.
+# Adjust these values to fine-tune how photos are evaluated.
+# NOTE: Ensure the sum of all weights equals 1.0 for consistent scoring.
+SCORING_WEIGHTS = {
+    "blur": 0.4,       # Higher value means blurriness has a greater negative impact on the score.
+    "exposure": 0.3,   # Higher value means exposure quality is more critical for the score.
+    "contrast": 0.2,   # Higher value means contrast quality is more critical for the score.
+    "color": 0.1       # Higher value means colorfulness is more critical for the score.
+}
 
 def normalize_simple(value, max_val):
     return min(float(value) / max_val, 1.0)
@@ -62,7 +67,7 @@ async def analyze_images(files: List[UploadFile] = File(...)):
             img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
             if img is None:
-                raise ValueError("Invalid image file")
+                raise ValueError(f"Could not decode image '{file.filename}'. It might be corrupted or an unsupported format.")
 
             # --- 1. Grayscale & Faces ---
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -91,10 +96,10 @@ async def analyze_images(files: List[UploadFile] = File(...)):
 
             # --- 4. Final Score ---
             final_score = (
-                (norm_blur * BLUR_WEIGHT) +
-                (norm_exposure * EXPOSURE_WEIGHT) +
-                (norm_contrast * CONTRAST_WEIGHT) +
-                (norm_color * COLOR_WEIGHT)
+                (norm_blur * SCORING_WEIGHTS["blur"]) +
+                (norm_exposure * SCORING_WEIGHTS["exposure"]) +
+                (norm_contrast * SCORING_WEIGHTS["contrast"]) +
+                (norm_color * SCORING_WEIGHTS["color"])
             )
 
             # --- 5. Recommendation ---
@@ -121,10 +126,20 @@ async def analyze_images(files: List[UploadFile] = File(...)):
                 "recommendation": recommendation
             })
 
-        except Exception as e:
+        except ValueError as e:
             results.append({
                 "filename": file.filename,
                 "error": str(e)
+            })
+        except cv2.error as e:
+            results.append({
+                "filename": file.filename,
+                "error": f"Image processing error with OpenCV for '{file.filename}': {e}"
+            })
+        except Exception as e:
+            results.append({
+                "filename": file.filename,
+                "error": f"An unexpected server error occurred during analysis of '{file.filename}': {e}"
             })
 
     return {"analysis_results": results}
