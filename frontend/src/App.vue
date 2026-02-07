@@ -7,7 +7,7 @@ import AnalyzingView from './components/AnalyzingView.vue';
 import ResultsView from './components/ResultsView.vue';
 import GroupDetailView from './components/GroupDetailView.vue';
 import { Info } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import axios from 'axios';
 
 const selectedFiles = ref([]);
@@ -15,6 +15,23 @@ const currentView = ref('upload'); // 'upload' | 'analyzing' | 'results' | 'grou
 const analysisResults = ref(null);
 const fileBlobUrls = ref({}); // Maps filename to blob URL
 const selectedGroup = ref(null); // For the detail view
+
+// Load results from sessionStorage on mount
+onMounted(() => {
+  const storedResults = sessionStorage.getItem('analysisResults');
+  if (storedResults) {
+    try {
+      analysisResults.value = JSON.parse(storedResults);
+      currentView.value = 'results';
+      // Note: Blob URLs cannot be re-created from sessionStorage directly.
+      // Image previews will not show for reloaded results.
+      // A more complex solution (e.g., re-uploading or base64 storage) would be needed for full persistence.
+    } catch (e) {
+      console.error("Failed to parse stored analysis results:", e);
+      sessionStorage.removeItem('analysisResults'); // Clear bad data
+    }
+  }
+});
 
 const handleFiles = (files) => {
   console.log("Files selected:", files);
@@ -31,6 +48,7 @@ const handleFiles = (files) => {
 const handleBackToUpload = () => {
   // Revoke old blob URLs to prevent memory leaks
   Object.values(fileBlobUrls.value).forEach(url => URL.revokeObjectURL(url));
+  sessionStorage.removeItem('analysisResults'); // Clear stored results when going back to upload
   
   currentView.value = 'upload';
   selectedFiles.value = [];
@@ -67,6 +85,7 @@ const analyzePhotos = async () => {
     }));
     
     analysisResults.value = resultsWithBlobs;
+    sessionStorage.setItem('analysisResults', JSON.stringify(resultsWithBlobs));
     currentView.value = 'results';
     
   } catch (error) {
