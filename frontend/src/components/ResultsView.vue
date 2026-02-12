@@ -1,7 +1,7 @@
 <script setup>
-import { ChevronLeft, Wand2, ChevronDown, Download } from 'lucide-vue-next'; // Import Download
+import { ChevronLeft, Wand2, ChevronDown, Download, Check, X } from 'lucide-vue-next'; // Added Check, X
 import StatusBadge from './StatusBadge.vue';
-import { computed, ref } from 'vue'; // Import ref
+import { computed, ref } from 'vue';
 
 const props = defineProps({
   results: {
@@ -10,10 +10,10 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['back', 'confirm', 'view-group']);
+const emit = defineEmits(['back', 'confirm', 'view-group', 'toggle-keep']); // Added toggle-keep
 
 // Local state for collapsed groups
-const collapsedGroups = ref({}); // { 'Group Title': true/false }
+const collapsedGroups = ref({});
 
 const toggleGroup = (groupTitle) => {
   collapsedGroups.value[groupTitle] = !collapsedGroups.value[groupTitle];
@@ -31,7 +31,7 @@ const downloadPhoto = (blobUrl, filename) => {
 
 // Computing Stats
 const totalPhotos = computed(() => props.results.length);
-const photosToDelete = computed(() => props.results.filter(r => r.recommendation === 'Delete').length);
+const photosToDeleteCount = computed(() => props.results.filter(r => r.recommendation === 'Delete').length);
 
 const getQualityLabel = (score) => {
   if (score > 0.8) return 'High Quality';
@@ -67,15 +67,16 @@ const groupedResults = computed(() => {
 });
 
 const handleBulkAction = () => {
-  // By default, open the "Review" group for bulk actions, or the first group if it doesn't exist
-  const reviewGroup = groupedResults.value.find(g => g.title.includes('Review'));
-  if (reviewGroup) {
-    // emit('view-group', reviewGroup); // Temporarily disabling original behavior for collapse/expand MVP
-  } else if (groupedResults.value.length > 0) {
-    // emit('view-group', groupedResults.value[0]); // Temporarily disabling original behavior for collapse/expand MVP
-  }
-  // For now, let's just log this action
-  console.log("Bulk Action Clicked, but original view-group behavior is temporarily disabled for MVP collapse/expand");
+  // Logic: Mark all 'Review' items as 'Keep' as a simple bulk action demo
+  const reviewItems = props.results.filter(r => r.recommendation === 'Review');
+  reviewItems.forEach(item => {
+    emit('toggle-keep', item);
+  });
+  console.log("Bulk Action: Marked all 'Review' items as Keep");
+};
+
+const handleToggle = (item) => {
+  emit('toggle-keep', item);
 };
 </script>
 
@@ -99,7 +100,7 @@ const handleBulkAction = () => {
         </div>
         <div class="stat-card">
           <span class="label">TO DELETE</span>
-          <span class="value red">{{ photosToDelete }}</span>
+          <span class="value red">{{ photosToDeleteCount }}</span>
         </div>
       </div>
 
@@ -114,7 +115,7 @@ const handleBulkAction = () => {
         </div>
 
         <div v-if="!collapsedGroups[group.title]" class="photo-grid">
-          <div v-for="(item, i) in group.items" :key="i" class="photo-card">
+          <div v-for="(item, i) in group.items" :key="i" class="photo-card" @click="$emit('view-group', group)">
             <img v-if="item.blobUrl" :src="item.blobUrl" class="photo-img" alt="Analyzed photo" />
             <div v-else class="img-placeholder">
                <span class="filename">{{ item.filename }}</span>
@@ -131,6 +132,24 @@ const handleBulkAction = () => {
                 :status="item.error ? 'Error' : item.recommendation"
                 :error-message="item.error"
               />
+            </div>
+
+            <!-- Manual Toggle Controls -->
+            <div class="control-overlay" @click.stop>
+              <button 
+                class="ctrl-btn keep" 
+                :class="{ active: item.recommendation === 'Keep' }"
+                @click="handleToggle(item)"
+              >
+                <Check :size="14" />
+              </button>
+              <button 
+                class="ctrl-btn delete" 
+                :class="{ active: item.recommendation === 'Delete' }"
+                @click="handleToggle(item)"
+              >
+                <X :size="14" />
+              </button>
             </div>
             
             <!-- Quality Label -->
@@ -149,7 +168,7 @@ const handleBulkAction = () => {
     <div class="bottom-action-bar">
       <button class="confirm-btn" @click="$emit('confirm')">
         <Wand2 :size="20" />
-        <span>Confirm {{ photosToDelete }} Deletions</span>
+        <span>Confirm {{ photosToDeleteCount }} Deletions</span>
       </button>
       <p class="disclaimer">All deleted photos will be moved to Recently Deleted in your Photos app.</p>
     </div>
@@ -182,6 +201,61 @@ h1 {
   color: var(--primary-blue);
   font-weight: 600;
   font-size: 14px;
+}
+
+/* Control Overlay */
+.control-overlay {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 4px;
+  border-radius: 8px;
+  backdrop-filter: blur(4px);
+}
+
+.photo-card:hover .control-overlay {
+  opacity: 1;
+}
+
+.badge-overlay {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  transition: opacity 0.2s ease;
+}
+
+.photo-card:hover .badge-overlay {
+  opacity: 0;
+}
+
+.ctrl-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border: 1px solid #E5E7EB;
+  color: var(--text-secondary);
+}
+
+.ctrl-btn.active.keep {
+  background: #10B981;
+  color: white;
+  border-color: #10B981;
+}
+
+.ctrl-btn.active.delete {
+  background: #EF4444;
+  color: white;
+  border-color: #EF4444;
 }
 
 .scroll-content {
