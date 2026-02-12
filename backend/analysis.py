@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 import os
+import imagehash
+from PIL import Image
 
 # Get path to Haar cascade file from OpenCV's data
 face_cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
@@ -55,8 +57,6 @@ def calculate_exposure_stats(gray_img):
     highlight_clip_ratio = highlight_count / total_pixels
     
     # Dynamic Range (using percentiles)
-    # This is a bit computationally expensive for very large images, so we can use a simpler approximation if needed
-    # But for MVP, numpy percentiles on the flattened array is fine
     p1, p99 = np.percentile(gray_img, [1, 99])
     dynamic_range = p99 - p1
     
@@ -74,11 +74,6 @@ def calculate_contrast(gray_img):
 def calculate_colorfulness(img_bgr):
     """
     Calculates Hasler & Süsstrunk colorfulness metric.
-    rg = R - G
-    yb = 0.5 * (R + G) - B
-    std_root = sqrt(std(rg)^2 + std(yb)^2)
-    mean_root = sqrt(mean(rg)^2 + mean(yb)^2)
-    Metric = std_root + 0.3 * mean_root
     """
     B, G, R = cv2.split(img_bgr.astype("float"))
     rg = np.absolute(R - G)
@@ -94,3 +89,56 @@ def calculate_colorfulness(img_bgr):
     mean_root = np.sqrt(mean_rg**2 + mean_yb**2)
     
     return std_root + (0.3 * mean_root)
+
+def calculate_phash(img_bgr):
+    """Calculates perceptual hash of an image."""
+    # Convert BGR (OpenCV) to RGB then to PIL Image
+    img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+    pil_img = Image.fromarray(img_rgb)
+    return str(imagehash.phash(pil_img))
+
+def cluster_results(results, threshold=10):
+    """
+    Groups analysis results based on perceptual hash similarity.
+    threshold: Max Hamming distance to be considered 'similar'.
+    Returns list of groups [{title, items:[]}]
+    """
+    clusters = []
+    
+    for item in results:
+        assigned = False
+        item_hash = imagehash.hex_to_hash(item["phash"])
+        
+        for cluster in clusters:
+            # Check distance against the first item in the cluster (the representative)
+            rep_hash = imagehash.hex_to_hash(cluster[0]["phash"])
+            if (item_hash - rep_hash) < threshold:
+                cluster.append(item)
+                assigned = True
+                break
+        
+        if not assigned:
+            clusters.append([item])
+            
+    # Format for Frontend
+    formatted_groups = []
+    for i, cluster in enumerate(clusters):
+        # Sort cluster by final_score descending to pick the best shot
+        cluster.sort(key=lambda x: x["final_score"], reverse=True)
+        
+        # Mark the first one as best
+        for j, item in enumerate(cluster):
+            item["isBest"] = (j == 0)
+            
+        title = "Group " + str(i + 1)
+        if len(cluster) == 1:
+            title = "Unique Photo"
+        else:
+            title = f"Similar Set ({len(cluster)} items)"
+            
+        formatted_groups.append({
+            "title": title,
+            "items": cluster
+        })
+        
+    return formatted_groups

@@ -2,3 +2,6 @@ fastapi
 uvicorn
 opencv-python
 numpy
+ImageHash
+Pillow
+pillow-heif

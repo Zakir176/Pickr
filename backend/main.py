@@ -2,6 +2,12 @@ from fastapi import FastAPI, UploadFile, File
 from typing import List
 import cv2
 import numpy as np
+import io
+from PIL import Image
+from pillow_heif import register_heif_opener
+
+register_heif_opener() # Enable HEIC support in Pillow
+
 try:
     import backend.analysis as analysis
 except ModuleNotFoundError:
@@ -12,41 +18,30 @@ app = FastAPI()
 # --- Constants for Normalization ---
 MAX_BLUR_THRESHOLD = 500.0
 IDEAL_EXPOSURE = 127.5
-IDEAL_CONTRAST = 60.0       # Standard deviation of ~60 is good contrast
-IDEAL_COLORFULNESS = 40.0   # Hasler metric around 40 is vibrant
+IDEAL_CONTRAST = 60.0
+IDEAL_COLORFULNESS = 40.0
 
 # --- Constants for Recommendations ---
 KEEP_THRESHOLD = 0.75
 REVIEW_THRESHOLD = 0.50
 
 # --- Scoring Configuration ---
-# These weights determine the importance of each metric in the final score.
-# Adjust these values to fine-tune how photos are evaluated.
-# NOTE: Ensure the sum of all weights equals 1.0 for consistent scoring.
 SCORING_WEIGHTS = {
-    "blur": 0.4,       # Higher value means blurriness has a greater negative impact on the score.
-    "exposure": 0.3,   # Higher value means exposure quality is more critical for the score.
-    "contrast": 0.2,   # Higher value means contrast quality is more critical for the score.
-    "color": 0.1       # Higher value means colorfulness is more critical for the score.
+    "blur": 0.4,
+    "exposure": 0.3,
+    "contrast": 0.2,
+    "color": 0.1
 }
 
 def normalize_simple(value, max_val):
     return min(float(value) / max_val, 1.0)
 
 def calculate_final_exposure_score(stats):
-    """
-    Combines mean brightness with clipping penalties.
-    """
     mean_val = stats["mean_brightness"]
     dist_score = 1.0 - (abs(mean_val - IDEAL_EXPOSURE) / IDEAL_EXPOSURE)
-    
-    # Penalize if too much clipping
     clipping_penalty = max(stats["shadow_clip_ratio"], stats["highlight_clip_ratio"])
-    
-    # If clipping is > 20%, heavily penalize
     if clipping_penalty > 0.2:
         dist_score *= 0.5
-        
     return max(dist_score, 0.0)
 
 def get_recommendation(final_score: float) -> str:
@@ -59,15 +54,21 @@ def get_recommendation(final_score: float) -> str:
 
 @app.post("/analyze")
 async def analyze_images(files: List[UploadFile] = File(...)):
-    results = []
+    raw_results = []
     for file in files:
         try:
             contents = await file.read()
-            nparr = np.frombuffer(contents, np.uint8)
-            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            
+            # --- HEIC & Format Handling ---
+            # We use Pillow to handle formats (including HEIC) then convert to OpenCV BGR
+            pil_img = Image.open(io.BytesIO(contents))
+            if pil_img.mode != "RGB":
+                pil_img = pil_img.convert("RGB")
+            
+            img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
 
             if img is None:
-                raise ValueError(f"Could not decode image '{file.filename}'. It might be corrupted or an unsupported format.")
+                raise ValueError(f"Could not decode image '{file.filename}'.")
 
             # --- 1. Grayscale & Faces ---
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -78,20 +79,12 @@ async def analyze_images(files: List[UploadFile] = File(...)):
             exposure_stats = analysis.calculate_exposure_stats(gray)
             contrast_raw = analysis.calculate_contrast(gray)
             color_raw = analysis.calculate_colorfulness(img)
+            phash = analysis.calculate_phash(img)
             
             # --- 3. Normalize ---
-            
-            # Blur: If faces were found, we are more lenient with threshold as we are checking a smaller sharp area
-            # But actually, face variance is usually higher if sharp.
             norm_blur = normalize_simple(blur_raw, MAX_BLUR_THRESHOLD)
-            
-            # Exposure
             norm_exposure = calculate_final_exposure_score(exposure_stats)
-            
-            # Contrast
             norm_contrast = normalize_simple(contrast_raw, IDEAL_CONTRAST)
-            
-            # Color
             norm_color = normalize_simple(color_raw, IDEAL_COLORFULNESS)
 
             # --- 4. Final Score ---
@@ -105,8 +98,9 @@ async def analyze_images(files: List[UploadFile] = File(...)):
             # --- 5. Recommendation ---
             recommendation = get_recommendation(final_score)
             
-            results.append({
+            raw_results.append({
                 "filename": file.filename,
+                "phash": phash,
                 "score_components": {
                     "blur": round(norm_blur, 2),
                     "exposure": round(norm_exposure, 2),
@@ -117,8 +111,6 @@ async def analyze_images(files: List[UploadFile] = File(...)):
                     "blur_var": round(float(blur_raw), 2),
                     "faces_detected": int(len(faces)) if faces is not None else 0,
                     "mean_brightness": round(float(exposure_stats["mean_brightness"]), 2),
-                    "shadow_clip": round(float(exposure_stats["shadow_clip_ratio"]), 3),
-                    "highlight_clip": round(float(exposure_stats["highlight_clip_ratio"]), 3),
                     "contrast_std": round(float(contrast_raw), 2),
                     "color_metric": round(float(color_raw), 2)
                 },
@@ -126,20 +118,16 @@ async def analyze_images(files: List[UploadFile] = File(...)):
                 "recommendation": recommendation
             })
 
-        except ValueError as e:
-            results.append({
-                "filename": file.filename,
-                "error": str(e)
-            })
-        except cv2.error as e:
-            results.append({
-                "filename": file.filename,
-                "error": f"Image processing error with OpenCV for '{file.filename}': {e}"
-            })
         except Exception as e:
-            results.append({
+            raw_results.append({
                 "filename": file.filename,
-                "error": f"An unexpected server error occurred during analysis of '{file.filename}': {e}"
+                "error": str(e),
+                "phash": "0000000000000000", # Dummy for error cases
+                "final_score": 0.0,
+                "recommendation": "Review"
             })
 
-    return {"analysis_results": results}
+    # --- 6. Clustering ---
+    grouped_results = analysis.cluster_results(raw_results)
+
+    return {"analysis_results": grouped_results}
