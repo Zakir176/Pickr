@@ -41,10 +41,12 @@ def test_backend():
     print("Generating test images...")
     files_to_test = [
         ("black.jpg", "solid_black", "Expect Low Exposure Score"),
-        ("white.jpg", "solid_white", "Expect Low Exposure Score (Overexposed)"),
         ("gray.jpg", "solid_gray", "Expect High Exposure Score (Ideal)"),
         ("sharp.jpg", "noise_sharp", "Expect High Blur Score (Sharp)"),
         ("blurry.jpg", "noise_blur", "Expect Low Blur Score (Blurry)"),
+        # Near-duplicates
+        ("dup1.jpg", "solid_gray", "Duplicate 1"),
+        ("dup2.jpg", "solid_gray", "Duplicate 2"),
     ]
     
     files_payload = []
@@ -59,40 +61,23 @@ def test_backend():
             print(f"Created {fname}: {desc}")
 
         print("\nSending request to backend...")
-        log_file = open("results.log", "w", encoding="utf-8")
         try:
             response = requests.post(API_URL, files=files_payload)
             if response.status_code == 200:
-                results = response.json().get("analysis_results", [])
-                print("\n--- Analysis Results ---")
-                log_file.write("--- Analysis Results ---\n")
-                for res in results:
-                    metrics = res.get('metrics_raw', {})
-                    scores = res.get('score_components', {})
-                    
-                    s = f"\nFile: {res['filename']}\n"
-                    s += f"  Final Score: {res.get('final_score')}\n"
-                    s += f"  Recommendation: {res.get('recommendation')}\n"
-                    s += f"  Blur (Var): {metrics.get('blur_var')} (Score: {scores.get('blur')})\n"
-                    s += f"  Faces: {metrics.get('faces_detected')}\n"
-                    s += f"  Exposure (Mean): {metrics.get('mean_brightness')} (Score: {scores.get('exposure')})\n"
-                    s += f"  Clipping: Shadow {metrics.get('shadow_clip')}, Highlight {metrics.get('highlight_clip')}\n"
-                    s += f"  Contrast (Std): {metrics.get('contrast_std')} (Score: {scores.get('contrast')})\n"
-                    s += f"  Color (Hasler): {metrics.get('color_metric')} (Score: {scores.get('color')})\n"
-                    
-                    print(s)
-                    log_file.write(s)
+                groups = response.json().get("analysis_results", [])
+                print("\n--- Analysis Results (Grouped) ---")
+                for group in groups:
+                    print(f"\nGroup: {group['title']}")
+                    for res in group['items']:
+                        metrics = res.get('metrics_raw', {})
+                        s = f"  - {res['filename']} | Score: {res.get('final_score')} | Best: {res.get('isBest')} | Hash: {res.get('phash')}"
+                        print(s)
             else:
                 print(f"Error: Server returned {response.status_code}")
-                # log_file.write(f"Error: Server returned {response.status_code}")
                 print(response.text)
         except requests.exceptions.ConnectionError:
             print("Error: Could not connect to server. Is it running?")
-        finally:
-            log_file.close()
-
     finally:
-        # Cleanup
         for f in file_handlers:
             f.close()
             
