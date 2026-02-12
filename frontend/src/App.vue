@@ -6,15 +6,16 @@ import ActionButton from './components/ActionButton.vue';
 import AnalyzingView from './components/AnalyzingView.vue';
 import ResultsView from './components/ResultsView.vue';
 import GroupDetailView from './components/GroupDetailView.vue';
+import SuccessView from './components/SuccessView.vue'; // Added SuccessView
 import { Info } from 'lucide-vue-next';
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
 
 const selectedFiles = ref([]);
-const currentView = ref('upload'); // 'upload' | 'analyzing' | 'results' | 'groupDetail'
+const currentView = ref('upload'); // 'upload' | 'analyzing' | 'results' | 'groupDetail' | 'success'
 const analysisResults = ref(null);
-const fileBlobUrls = ref({}); // Maps filename to blob URL
-const selectedGroup = ref(null); // For the detail view
+const fileBlobUrls = ref({});
+const selectedGroup = ref(null);
 
 // Load results from sessionStorage on mount
 onMounted(() => {
@@ -23,21 +24,15 @@ onMounted(() => {
     try {
       analysisResults.value = JSON.parse(storedResults);
       currentView.value = 'results';
-      // Note: Blob URLs cannot be re-created from sessionStorage directly.
-      // Image previews will not show for reloaded results.
-      // A more complex solution (e.g., re-uploading or base64 storage) would be needed for full persistence.
     } catch (e) {
       console.error("Failed to parse stored analysis results:", e);
-      sessionStorage.removeItem('analysisResults'); // Clear bad data
+      sessionStorage.removeItem('analysisResults');
     }
   }
 });
 
 const handleFiles = (files) => {
-  console.log("Files selected:", files);
   selectedFiles.value = files;
-
-  // Create blob URLs for preview
   const newUrls = {};
   files.forEach(file => {
     newUrls[file.name] = URL.createObjectURL(file);
@@ -46,10 +41,8 @@ const handleFiles = (files) => {
 };
 
 const handleBackToUpload = () => {
-  // Revoke old blob URLs to prevent memory leaks
   Object.values(fileBlobUrls.value).forEach(url => URL.revokeObjectURL(url));
-  sessionStorage.removeItem('analysisResults'); // Clear stored results when going back to upload
-  
+  sessionStorage.removeItem('analysisResults');
   currentView.value = 'upload';
   selectedFiles.value = [];
   fileBlobUrls.value = {};
@@ -62,37 +55,57 @@ const analyzePhotos = async () => {
   }
   
   currentView.value = 'analyzing';
-  
   const formData = new FormData();
   selectedFiles.value.forEach(file => {
     formData.append('files', file);
   });
 
   try {
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    const response = await axios.post('/analyze', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    });
-    console.log(response.data);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    const response = await axios.post('/analyze', formData);
     
-    // Merge blob URLs with analysis results
     const resultsWithBlobs = (response.data.analysis_results || []).map(result => ({
       ...result,
-      blobUrl: fileBlobUrls.value[result.filename]
+      blobUrl: fileBlobUrls.value[result.filename],
+      isBest: false // New field for Phase 1
     }));
     
     analysisResults.value = resultsWithBlobs;
     sessionStorage.setItem('analysisResults', JSON.stringify(resultsWithBlobs));
     currentView.value = 'results';
-    
   } catch (error) {
     console.error("Analysis failed:", error);
     alert("Analysis failed.");
     currentView.value = 'upload';
   }
+};
+
+// --- Phase 1 Handlers ---
+
+const handleToggleKeep = (item) => {
+  const target = analysisResults.value.find(r => r.filename === item.filename);
+  if (target) {
+    target.recommendation = target.recommendation === 'Keep' ? 'Delete' : 'Keep';
+    sessionStorage.setItem('analysisResults', JSON.stringify(analysisResults.value));
+  }
+};
+
+const handleSetBest = (item) => {
+  // Clear other "best" in the same group (for now we group by recommendation)
+  analysisResults.value.forEach(r => {
+     if (r.recommendation === item.recommendation) {
+       r.isBest = (r.filename === item.filename);
+     }
+  });
+  sessionStorage.setItem('analysisResults', JSON.stringify(analysisResults.value));
+};
+
+const confirmDeletions = () => {
+  currentView.value = 'success';
+};
+
+const handleFinish = () => {
+  handleBackToUpload();
 };
 
 const handleViewGroup = (group) => {
@@ -104,6 +117,16 @@ const handleBackToResults = () => {
   currentView.value = 'results';
   selectedGroup.value = null;
 };
+
+const successStats = computed(() => {
+  if (!analysisResults.value) return { deletedCount: 0, spaceSaved: '0 MB' };
+  const deleted = analysisResults.value.filter(r => r.recommendation === 'Delete').length;
+  // Mock space saving: assume 3MB per photo
+  return {
+    deletedCount: deleted,
+    spaceSaved: `${deleted * 3} MB`
+  };
+});
 </script>
 
 <template>
@@ -112,20 +135,16 @@ const handleBackToResults = () => {
     <!-- Upload View -->
     <template v-if="currentView === 'upload'">
       <TopBar />
-      
       <main class="content-area">
         <UploadCard @files-selected="handleFiles" />
-        
         <div class="info-text">
           <Info :size="14" />
           <span>SUPPORTS JPG, PNG, HEIC</span>
         </div>
-        
         <div class="action-area">
           <ActionButton @click="analyzePhotos" />
         </div>
       </main>
-      
       <BottomNav />
     </template>
 
@@ -139,8 +158,9 @@ const handleBackToResults = () => {
       <ResultsView 
         :results="analysisResults"
         @back="handleBackToUpload"
-        @confirm="alert('Deletions Confirmed (Mock)')"
+        @confirm="confirmDeletions"
         @view-group="handleViewGroup"
+        @toggle-keep="handleToggleKeep"
       />
     </template>
 
@@ -149,6 +169,16 @@ const handleBackToResults = () => {
       <GroupDetailView
         :group="selectedGroup"
         @back="handleBackToResults"
+        @toggle-keep="handleToggleKeep"
+        @set-best="handleSetBest"
+      />
+    </template>
+
+    <!-- Success View -->
+    <template v-else-if="currentView === 'success'">
+      <SuccessView 
+        :stats="successStats"
+        @finish="handleFinish"
       />
     </template>
 
@@ -185,7 +215,7 @@ const handleBackToResults = () => {
 }
 
 .action-area {
-  margin-top: auto; /* Push to bottom of content area */
+  margin-top: auto;
   margin-bottom: 24px;
   padding: 0 16px;
 }
