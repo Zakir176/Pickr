@@ -4,13 +4,17 @@ import StatusBadge from './StatusBadge.vue';
 import { computed, ref } from 'vue';
 
 const props = defineProps({
-  results: {
+  groups: {
+    type: Array,
+    default: () => []
+  },
+  flatResults: {
     type: Array,
     default: () => []
   }
 });
 
-const emit = defineEmits(['back', 'confirm', 'view-group', 'toggle-keep']); // Added toggle-keep
+const emit = defineEmits(['back', 'confirm', 'view-group', 'toggle-keep']);
 
 // Local state for collapsed groups
 const collapsedGroups = ref({});
@@ -30,8 +34,8 @@ const downloadPhoto = (blobUrl, filename) => {
 };
 
 // Computing Stats
-const totalPhotos = computed(() => props.results.length);
-const photosToDeleteCount = computed(() => props.results.filter(r => r.recommendation === 'Delete').length);
+const totalPhotos = computed(() => props.flatResults.length);
+const photosToDeleteCount = computed(() => props.flatResults.filter(r => r.recommendation === 'Delete').length);
 
 const getQualityLabel = (score) => {
   if (score > 0.8) return 'High Quality';
@@ -39,36 +43,9 @@ const getQualityLabel = (score) => {
   return 'Low Quality';
 };
 
-// --- Mocking Grouping for UI Demo ---
-// Since backend is flat, we'll group simply by recommendation for now
-// to simulate the "Similar Set" look from the design.
-const groupedResults = computed(() => {
-  const groups = [];
-  
-  // Group 1: High Quality / Keep
-  const keep = props.results.filter(r => r.recommendation === 'Keep');
-  if (keep.length > 0) {
-    groups.push({ title: `Best Shots (${keep.length} items)`, items: keep });
-  }
-  
-  // Group 2: Review
-  const review = props.results.filter(r => r.recommendation === 'Review');
-  if (review.length > 0) {
-    groups.push({ title: `Needs Review (${review.length} items)`, items: review });
-  }
-
-  // Group 3: Delete (Low Quality)
-  const del = props.results.filter(r => r.recommendation === 'Delete');
-  if (del.length > 0) {
-    groups.push({ title: `Low Quality / Duplicates (${del.length} items)`, items: del });
-  }
-  
-  return groups;
-});
-
 const handleBulkAction = () => {
   // Logic: Mark all 'Review' items as 'Keep' as a simple bulk action demo
-  const reviewItems = props.results.filter(r => r.recommendation === 'Review');
+  const reviewItems = props.flatResults.filter(r => r.recommendation === 'Review');
   reviewItems.forEach(item => {
     emit('toggle-keep', item);
   });
@@ -105,11 +82,11 @@ const handleToggle = (item) => {
       </div>
 
       <!-- Groups -->
-      <div v-for="(group, idx) in groupedResults" :key="idx" class="group-section">
+      <div v-for="(group, idx) in groups" :key="idx" class="group-section">
         <div class="group-header clickable" @click="toggleGroup(group.title)">
           <h3>{{ group.title }}</h3>
           <div class="group-header-right">
-            <span class="sub-text" v-if="idx===0">Best match selected</span>
+            <span class="sub-text" v-if="group.items.length > 1">Best match selected</span>
             <ChevronDown :class="{ 'rotate-180': collapsedGroups[group.title] }" :size="20" class="chevron-icon" />
           </div>
         </div>
