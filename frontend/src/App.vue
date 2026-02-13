@@ -13,7 +13,11 @@ import axios from 'axios';
 
 const selectedFiles = ref([]);
 const currentView = ref('upload'); // 'upload' | 'analyzing' | 'results' | 'groupDetail' | 'success'
-const analysisResults = ref(null);
+const analysisResults = ref(null); // This will store the grouped results from backend
+const flatResults = computed(() => {
+  if (!analysisResults.value) return [];
+  return analysisResults.value.flatMap(group => group.items);
+});
 const fileBlobUrls = ref({});
 const selectedGroup = ref(null);
 
@@ -64,14 +68,17 @@ const analyzePhotos = async () => {
     await new Promise(resolve => setTimeout(resolve, 1500));
     const response = await axios.post('/analyze', formData);
     
-    const resultsWithBlobs = (response.data.analysis_results || []).map(result => ({
-      ...result,
-      blobUrl: fileBlobUrls.value[result.filename],
-      isBest: false // New field for Phase 1
+    // The backend returns groups: [{ title: string, items: Array }]
+    const groupedResults = (response.data.analysis_results || []).map(group => ({
+      ...group,
+      items: group.items.map(item => ({
+        ...item,
+        blobUrl: fileBlobUrls.value[item.filename]
+      }))
     }));
     
-    analysisResults.value = resultsWithBlobs;
-    sessionStorage.setItem('analysisResults', JSON.stringify(resultsWithBlobs));
+    analysisResults.value = groupedResults;
+    sessionStorage.setItem('analysisResults', JSON.stringify(groupedResults));
     currentView.value = 'results';
   } catch (error) {
     console.error("Analysis failed:", error);
@@ -83,19 +90,25 @@ const analyzePhotos = async () => {
 // --- Phase 1 Handlers ---
 
 const handleToggleKeep = (item) => {
-  const target = analysisResults.value.find(r => r.filename === item.filename);
-  if (target) {
-    target.recommendation = target.recommendation === 'Keep' ? 'Delete' : 'Keep';
-    sessionStorage.setItem('analysisResults', JSON.stringify(analysisResults.value));
-  }
+  // Find the item in the grouped results
+  analysisResults.value.forEach(group => {
+    const target = group.items.find(r => r.filename === item.filename);
+    if (target) {
+      target.recommendation = target.recommendation === 'Keep' ? 'Delete' : 'Keep';
+    }
+  });
+  sessionStorage.setItem('analysisResults', JSON.stringify(analysisResults.value));
 };
 
 const handleSetBest = (item) => {
-  // Clear other "best" in the same group (for now we group by recommendation)
-  analysisResults.value.forEach(r => {
-     if (r.recommendation === item.recommendation) {
-       r.isBest = (r.filename === item.filename);
-     }
+  // Find the group containing this item
+  analysisResults.value.forEach(group => {
+    const hasItem = group.items.some(r => r.filename === item.filename);
+    if (hasItem) {
+      group.items.forEach(r => {
+        r.isBest = (r.filename === item.filename);
+      });
+    }
   });
   sessionStorage.setItem('analysisResults', JSON.stringify(analysisResults.value));
 };
@@ -119,8 +132,9 @@ const handleBackToResults = () => {
 };
 
 const successStats = computed(() => {
-  if (!analysisResults.value) return { deletedCount: 0, spaceSaved: '0 MB' };
-  const deleted = analysisResults.value.filter(r => r.recommendation === 'Delete').length;
+  const results = flatResults.value;
+  if (results.length === 0) return { deletedCount: 0, spaceSaved: '0 MB' };
+  const deleted = results.filter(r => r.recommendation === 'Delete').length;
   // Mock space saving: assume 3MB per photo
   return {
     deletedCount: deleted,
@@ -156,7 +170,8 @@ const successStats = computed(() => {
     <!-- Results View -->
     <template v-else-if="currentView === 'results'">
       <ResultsView 
-        :results="analysisResults"
+        :groups="analysisResults"
+        :flat-results="flatResults"
         @back="handleBackToUpload"
         @confirm="confirmDeletions"
         @view-group="handleViewGroup"
