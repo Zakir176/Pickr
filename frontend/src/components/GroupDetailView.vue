@@ -39,7 +39,7 @@ const getQualityLabel = (score) => {
         <h1>Review Group</h1>
         <p class="sub-text">{{ group.items.length }} items</p>
       </div>
-      <button class="done-btn" @click="$emit('back')">Done</button>
+      <button class="done-btn" @click="$emit('back')">Next Group</button>
     </header>
 
     <div class="scroll-content">
@@ -55,7 +55,12 @@ const getQualityLabel = (score) => {
                 :class="{ active: item.isBest }"
                 @click="handleSetBest(item)"
              >
-               <Star :size="16" :fill="item.isBest ? '#FBBF24' : 'none'" :color="item.isBest ? '#FBBF24' : 'white'" />
+               <Star 
+                 :size="16" 
+                 :fill="item.isBest ? '#FBBF24' : 'none'" 
+                 :color="item.isBest ? '#FBBF24' : 'white'" 
+                 :class="{ 'glow-star': item.isBest }"
+               />
                <span v-if="item.isBest">Best Shot</span>
              </button>
           </div>
@@ -185,9 +190,20 @@ h1 {
 }
 
 .best-shot-indicator.active {
-  background: rgba(251, 191, 36, 0.2);
+  background: rgba(251, 191, 36, 0.25);
   border-color: #FBBF24;
   color: #FBBF24;
+  box-shadow: 0 0 15px rgba(251, 191, 36, 0.3);
+}
+
+.glow-star {
+  filter: drop-shadow(0 0 4px #FBBF24);
+  animation: star-pulse 2s infinite ease-in-out;
+}
+
+@keyframes star-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
 }
 
 .info-row {

@@ -8,7 +8,7 @@ import ResultsView from './components/ResultsView.vue';
 import GroupDetailView from './components/GroupDetailView.vue';
 import SuccessView from './components/SuccessView.vue'; // Added SuccessView
 import { Info } from 'lucide-vue-next';
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 
 const selectedFiles = ref([]);
@@ -117,6 +117,26 @@ const confirmDeletions = () => {
   currentView.value = 'success';
 };
 
+const handleSmartClean = () => {
+  if (!analysisResults.value) return;
+  
+  analysisResults.value.forEach(group => {
+    // If it's a similar set (multiple items)
+    if (group.items.length > 1) {
+      // 1. Ensure the 'Best Shot' is marked Keep
+      // 2. Mark all others as Delete
+      group.items.forEach(item => {
+        item.recommendation = item.isBest ? 'Keep' : 'Delete';
+      });
+    } else {
+      // For unique photos, respect the existing recommendation
+      // (Unless we want to be more aggressive, but let's keep it safe for now)
+    }
+  });
+  
+  sessionStorage.setItem('analysisResults', JSON.stringify(analysisResults.value));
+};
+
 const handleFinish = () => {
   handleBackToUpload();
 };
@@ -124,6 +144,21 @@ const handleFinish = () => {
 const handleViewGroup = (group) => {
   selectedGroup.value = group;
   currentView.value = 'groupDetail';
+};
+
+const handleNextGroup = () => {
+  if (!analysisResults.value || !selectedGroup.value) {
+    currentView.value = 'results';
+    return;
+  }
+  
+  const currentIndex = analysisResults.value.findIndex(g => g.title === selectedGroup.value.title);
+  if (currentIndex !== -1 && currentIndex < analysisResults.value.length - 1) {
+    selectedGroup.value = analysisResults.value[currentIndex + 1];
+  } else {
+    currentView.value = 'results';
+    selectedGroup.value = null;
+  }
 };
 
 const handleBackToResults = () => {
@@ -176,6 +211,7 @@ const successStats = computed(() => {
         @confirm="confirmDeletions"
         @view-group="handleViewGroup"
         @toggle-keep="handleToggleKeep"
+        @smart-clean="handleSmartClean"
       />
     </template>
 
@@ -183,7 +219,7 @@ const successStats = computed(() => {
     <template v-else-if="currentView === 'groupDetail'">
       <GroupDetailView
         :group="selectedGroup"
-        @back="handleBackToResults"
+        @back="handleNextGroup"
         @toggle-keep="handleToggleKeep"
         @set-best="handleSetBest"
       />
