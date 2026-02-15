@@ -144,7 +144,8 @@ You can now access the API documentation at [http://127.0.0.1:8000/docs](http://
 -   [ ] Display thumbnails with scores and recommendations.
 -   [ ] Allow users to manually override recommendations.
 
-### Phase 3: Advanced Features
--   [ ] Group similar or near-duplicate images.
--   [ ] Suggest the best shot from a group of similar photos.
--   [ ] Package as a Progressive Web App (PWA) for better mobile experience.
+### Phase 3: Advanced Features (In Progress)
+- [x] Group similar or near-duplicate images using PHash.
+- [x] Suggest the best shot from a group of similar photos.
+- [/] Package as a Progressive Web App (PWA) for better mobile experience.
+- [ ] Implement cloud-based processing (Future).
