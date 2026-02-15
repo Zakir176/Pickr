@@ -14,7 +14,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['back', 'confirm', 'view-group', 'toggle-keep']);
+const emit = defineEmits(['back', 'confirm', 'view-group', 'toggle-keep', 'smart-clean']);
 
 // Local state for collapsed groups
 const collapsedGroups = ref({});
@@ -55,6 +55,30 @@ const handleBulkAction = () => {
 const handleToggle = (item) => {
   emit('toggle-keep', item);
 };
+
+// Swipe Gestures
+const touchStartX = ref(0);
+const touchEndX = ref(0);
+const SWIPE_THRESHOLD = 50;
+
+const handleTouchStart = (e) => {
+  touchStartX.value = e.touches[0].clientX;
+};
+
+const handleTouchEnd = (e, item) => {
+  touchEndX.value = e.changedTouches[0].clientX;
+  const deltaX = touchEndX.value - touchStartX.value;
+
+  if (Math.abs(deltaX) > SWIPE_THRESHOLD) {
+    if (deltaX > 0 && item.recommendation !== 'Keep') {
+      // Swipe Right -> Keep
+      emit('toggle-keep', item);
+    } else if (deltaX < 0 && item.recommendation !== 'Delete') {
+      // Swipe Left -> Delete
+      emit('toggle-keep', item);
+    }
+  }
+};
 </script>
 
 <template>
@@ -65,7 +89,10 @@ const handleToggle = (item) => {
         <ChevronLeft :size="24" />
       </button>
       <h1>Curation Results</h1>
-      <button class="text-btn" @click="handleBulkAction">Bulk Action</button>
+      <button class="smart-btn" @click="$emit('smart-clean')">
+        <Wand2 :size="16" />
+        <span>Smart Clean</span>
+      </button>
     </header>
 
     <div class="scroll-content">
@@ -92,7 +119,13 @@ const handleToggle = (item) => {
         </div>
 
         <div v-if="!collapsedGroups[group.title]" class="photo-grid">
-          <div v-for="(item, i) in group.items" :key="i" class="photo-card" @click="$emit('view-group', group)">
+          <div 
+            v-for="(item, i) in group.items" :key="i" 
+            class="photo-card" 
+            @click="$emit('view-group', group)"
+            @touchstart="handleTouchStart"
+            @touchend="handleTouchEnd($event, item)"
+          >
             <img v-if="item.blobUrl" :src="item.blobUrl" class="photo-img" alt="Analyzed photo" />
             <div v-else class="img-placeholder">
                <span class="filename">{{ item.filename }}</span>
@@ -174,10 +207,22 @@ h1 {
   font-weight: 600;
 }
 
-.text-btn {
+.smart-btn {
+  background-color: #DBEAFE;
   color: var(--primary-blue);
-  font-weight: 600;
-  font-size: 14px;
+  padding: 8px 12px;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.smart-btn:hover {
+  background-color: #BFDBFE;
+  transform: translateY(-1px);
 }
 
 /* Control Overlay */
