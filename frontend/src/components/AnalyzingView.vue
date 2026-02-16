@@ -1,5 +1,6 @@
 <script setup>
 import { ChevronLeft, Sparkles } from 'lucide-vue-next';
+import AppLogo from './AppLogo.vue';
 
 defineProps({
   // No props needed yet
@@ -25,8 +26,8 @@ defineProps({
         </div>
       </div>
 
-      <h2>Analyzing photos...</h2>
-      <p>Finding duplicates and your best<br>shots to keep your gallery clean.</p>
+      <AppLogo />
+      <p class="mt-4">Finding duplicates and your best<br>shots to keep your gallery clean.</p>
     </div>
   </div>
 </template>
