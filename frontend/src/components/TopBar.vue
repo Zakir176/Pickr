@@ -1,13 +1,14 @@
 <script setup>
 import { ChevronLeft } from 'lucide-vue-next';
+import AppLogo from './AppLogo.vue';
 </script>
 
 <template>
-  <header class="top-bar">
+  <header class="top-bar glass-panel">
     <button class="icon-btn">
       <ChevronLeft :size="24" />
     </button>
-    <h1>Upload Photos</h1>
+    <AppLogo />
     <div class="spacer"></div>
   </header>
 </template>
@@ -18,13 +19,14 @@ import { ChevronLeft } from 'lucide-vue-next';
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  background-color: var(--bg-gray);
+  z-index: 100;
 }
 
 h1 {
   font-size: 18px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-primary);
+  letter-spacing: -0.5px;
 }
 
 .icon-btn {
@@ -39,6 +41,6 @@ h1 {
 }
 
 .spacer {
-  width: 24px; /* Balance the back arrow */
+  width: 24px;
 }
 </style>
