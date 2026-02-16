@@ -3,7 +3,7 @@ import { CloudUpload, Image as ImageIcon, Settings } from 'lucide-vue-next';
 </script>
 
 <template>
-  <nav class="bottom-nav">
+  <nav class="bottom-nav glass-panel">
     <button class="nav-item active">
       <CloudUpload :size="24" />
       <span>UPLOAD</span>
@@ -23,26 +23,28 @@ import { CloudUpload, Image as ImageIcon, Settings } from 'lucide-vue-next';
 .bottom-nav {
   display: flex;
   justify-content: space-around;
-  padding: 12px 16px 24px; /* Extra padding for bottom safe area */
-  background-color: var(--white);
-  border-top: 1px solid #E5E7EB;
+  padding: 12px 16px 32px;
+  z-index: 100;
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.03);
 }
 
 .nav-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   color: #9CA3AF;
+  transition: var(--transition);
 }
 
 .nav-item span {
   font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
 }
 
 .nav-item.active {
   color: var(--primary-blue);
+  transform: translateY(-2px);
 }
 </style>
