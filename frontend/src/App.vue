@@ -97,7 +97,7 @@ const handleToggleKeep = (item) => {
       target.recommendation = target.recommendation === 'Keep' ? 'Delete' : 'Keep';
     }
   });
-  sessionStorage.setItem('analysisResults', JSON.stringify(analysisResults.value));
+  saveResults();
 };
 
 const handleSetBest = (item) => {
@@ -110,7 +110,7 @@ const handleSetBest = (item) => {
       });
     }
   });
-  sessionStorage.setItem('analysisResults', JSON.stringify(analysisResults.value));
+  saveResults();
 };
 
 const confirmDeletions = () => {
@@ -128,13 +128,10 @@ const handleSmartClean = () => {
       group.items.forEach(item => {
         item.recommendation = item.isBest ? 'Keep' : 'Delete';
       });
-    } else {
-      // For unique photos, respect the existing recommendation
-      // (Unless we want to be more aggressive, but let's keep it safe for now)
     }
   });
   
-  sessionStorage.setItem('analysisResults', JSON.stringify(analysisResults.value));
+  saveResults();
 };
 
 const handleFinish = () => {
@@ -167,7 +164,7 @@ const handleBackToResults = () => {
 };
 
 const successStats = computed(() => {
-  const results = flatResults.value;
+  const results = flatResults.value || [];
   if (results.length === 0) return { deletedCount: 0, spaceSaved: '0 MB' };
   const deleted = results.filter(r => r.recommendation === 'Delete').length;
   // Mock space saving: assume 3MB per photo
@@ -176,63 +173,76 @@ const successStats = computed(() => {
     spaceSaved: `${deleted * 3} MB`
   };
 });
+
+// Debounced save to sessionStorage
+let saveTimeout = null;
+const saveResults = () => {
+  if (saveTimeout) clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    if (analysisResults.value) {
+      sessionStorage.setItem('analysisResults', JSON.stringify(analysisResults.value));
+    }
+  }, 1000);
+};
 </script>
 
 <template>
   <div class="app-container">
-    
-    <!-- Upload View -->
-    <template v-if="currentView === 'upload'">
-      <TopBar />
-      <main class="content-area">
-        <UploadCard @files-selected="handleFiles" />
-        <div class="info-text">
-          <Info :size="14" />
-          <span>SUPPORTS JPG, PNG, HEIC</span>
-        </div>
-        <div class="action-area">
-          <ActionButton @click="analyzePhotos" />
-        </div>
-      </main>
-      <BottomNav />
-    </template>
+    <transition name="fade" mode="out-in">
+      <div :key="currentView" class="view-wrapper">
+        <!-- Upload View -->
+        <template v-if="currentView === 'upload'">
+          <TopBar />
+          <main class="content-area">
+            <UploadCard @files-selected="handleFiles" />
+            <div class="info-text">
+              <Info :size="14" />
+              <span>SUPPORTS JPG, PNG, HEIC</span>
+            </div>
+            <div class="action-area">
+              <ActionButton @click="analyzePhotos" />
+            </div>
+          </main>
+          <BottomNav />
+        </template>
 
-    <!-- Analyzing View -->
-    <template v-else-if="currentView === 'analyzing'">
-      <AnalyzingView />
-    </template>
+        <!-- Analyzing View -->
+        <template v-else-if="currentView === 'analyzing'">
+          <AnalyzingView />
+        </template>
 
-    <!-- Results View -->
-    <template v-else-if="currentView === 'results'">
-      <ResultsView 
-        :groups="analysisResults"
-        :flat-results="flatResults"
-        @back="handleBackToUpload"
-        @confirm="confirmDeletions"
-        @view-group="handleViewGroup"
-        @toggle-keep="handleToggleKeep"
-        @smart-clean="handleSmartClean"
-      />
-    </template>
+        <!-- Results View -->
+        <template v-else-if="currentView === 'results'">
+          <ResultsView 
+            :groups="analysisResults"
+            :flat-results="flatResults"
+            @back="handleBackToUpload"
+            @confirm="confirmDeletions"
+            @view-group="handleViewGroup"
+            @toggle-keep="handleToggleKeep"
+            @smart-clean="handleSmartClean"
+          />
+        </template>
 
-    <!-- Group Detail View -->
-    <template v-else-if="currentView === 'groupDetail'">
-      <GroupDetailView
-        :group="selectedGroup"
-        @back="handleNextGroup"
-        @toggle-keep="handleToggleKeep"
-        @set-best="handleSetBest"
-      />
-    </template>
+        <!-- Group Detail View -->
+        <template v-else-if="currentView === 'groupDetail'">
+          <GroupDetailView
+            :group="selectedGroup"
+            @back="handleNextGroup"
+            @toggle-keep="handleToggleKeep"
+            @set-best="handleSetBest"
+          />
+        </template>
 
-    <!-- Success View -->
-    <template v-else-if="currentView === 'success'">
-      <SuccessView 
-        :stats="successStats"
-        @finish="handleFinish"
-      />
-    </template>
-
+        <!-- Success View -->
+        <template v-else-if="currentView === 'success'">
+          <SuccessView 
+            :stats="successStats"
+            @finish="handleFinish"
+          />
+        </template>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -242,6 +252,14 @@ const successStats = computed(() => {
   flex-direction: column;
   height: 100vh;
   background-color: var(--bg-gray);
+  overflow: hidden; /* Prevent double scrollbars with view-wrapper */
+}
+
+.view-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
 }
 
 .content-area {
