@@ -64,6 +64,18 @@ const emit = defineEmits(['finish']);
   padding: 32px 24px;
 }
 
+@media (min-width: 768px) {
+  .success-view {
+    padding: 64px 48px;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  
+  .stats-card {
+    padding: 40px;
+  }
+}
+
 .content {
   flex: 1;
   display: flex;
