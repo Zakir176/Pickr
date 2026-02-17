@@ -55,6 +55,16 @@ const handleFileChange = (event) => {
   margin: 16px;
   flex-grow: 1; /* Fill available space */
   justify-content: center;
+  transition: var(--transition);
+}
+
+@media (min-width: 768px) {
+  .upload-card {
+    padding: 80px 48px;
+    max-width: 600px;
+    margin: 40px auto;
+    border: 1px solid var(--glass-border);
+  }
 }
 
 .icon-circle {
