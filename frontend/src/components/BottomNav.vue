@@ -26,6 +26,21 @@ import { CloudUpload, Image as ImageIcon, Settings } from 'lucide-vue-next';
   padding: 12px 16px 32px;
   z-index: 100;
   box-shadow: 0 -4px 12px rgba(0,0,0,0.03);
+  width: 100%;
+  max-width: 480px; /* Keep nav compact even on desktop */
+  margin: 0 auto;
+  border-radius: 24px 24px 0 0;
+}
+
+@media (min-width: 768px) {
+  .bottom-nav {
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+    border-radius: 100px;
+    width: fit-content;
+    gap: 40px;
+    padding: 12px 40px;
+  }
 }
 
 .nav-item {

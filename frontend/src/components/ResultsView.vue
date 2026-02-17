@@ -393,8 +393,26 @@ h1 {
 
 .photo-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, 1fr);
   gap: 16px;
+}
+
+@media (min-width: 640px) {
+  .photo-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 960px) {
+  .photo-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 1100px) {
+  .photo-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
 }
 
 .group-section {
@@ -435,6 +453,8 @@ h1 {
   justify-content: center;
   gap: 10px;
   width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
   box-shadow: 0 8px 20px rgba(59, 130, 246, 0.25);
 }
 

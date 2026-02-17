@@ -138,6 +138,21 @@ h1 {
   gap: 32px;
 }
 
+@media (min-width: 768px) {
+  .scroll-content {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    align-content: start;
+    gap: 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .scroll-content {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 .item-card {
   display: flex;
   flex-direction: column;

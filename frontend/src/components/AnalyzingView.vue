@@ -44,8 +44,11 @@ defineProps({
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
+  padding: 16px 24px;
   background-color: var(--bg-gray);
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 h1 {
