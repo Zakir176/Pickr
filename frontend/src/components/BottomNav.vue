@@ -1,23 +1,49 @@
 <script setup>
 import { CloudUpload, Image as ImageIcon, Settings } from 'lucide-vue-next';
+
+const props = defineProps({
+  activeView: {
+    type: String,
+    default: 'upload'
+  }
+});
+
+const emit = defineEmits(['navigate']);
+
+const handleNavigate = (view) => {
+  emit('navigate', view);
+};
 </script>
 
 <template>
   <nav class="bottom-nav glass-panel">
-    <button class="nav-item active">
+    <button 
+      class="nav-item" 
+      :class="{ active: activeView === 'upload' }"
+      @click="handleNavigate('upload')"
+    >
       <CloudUpload :size="24" />
       <span>UPLOAD</span>
     </button>
-    <button class="nav-item">
+    <button 
+      class="nav-item"
+      :class="{ active: activeView === 'library' }"
+      @click="handleNavigate('library')"
+    >
       <ImageIcon :size="24" />
       <span>LIBRARY</span>
     </button>
-    <button class="nav-item">
+    <button 
+      class="nav-item"
+      :class="{ active: activeView === 'settings' }"
+      @click="handleNavigate('settings')"
+    >
       <Settings :size="24" />
       <span>SETTINGS</span>
     </button>
   </nav>
 </template>
+
 
 <style scoped>
 .bottom-nav {
