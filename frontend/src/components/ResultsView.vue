@@ -14,7 +14,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['back', 'confirm', 'view-group', 'toggle-keep', 'smart-clean']);
+const emit = defineEmits(['back', 'confirm', 'view-group', 'update-status', 'smart-clean']);
 
 // Local state for collapsed groups
 const collapsedGroups = ref({});
@@ -35,7 +35,16 @@ const downloadPhoto = (blobUrl, filename) => {
 
 // Computing Stats
 const totalPhotos = computed(() => props.flatResults.length);
-const photosToDeleteCount = computed(() => props.flatResults.filter(r => r.recommendation === 'Delete').length);
+const confirmedCount = computed(() => {
+  return props.flatResults.filter(r => r.isConfirmed).length;
+});
+
+
+const deletionsCount = computed(() => {
+  return props.flatResults.filter(r => r.recommendation === 'Delete').length;
+});
+
+
 
 const getQualityLabel = (score) => {
   if (score > 0.8) return 'High Quality';
@@ -43,8 +52,8 @@ const getQualityLabel = (score) => {
   return 'Low Quality';
 };
 
-const handleToggle = (item) => {
-  emit('toggle-keep', item);
+const handleSetStatus = (item, status) => {
+  emit('update-status', item, status);
 };
 
 // Smoother Swipe Gestures
@@ -82,10 +91,10 @@ const handleTouchEnd = (e, item) => {
   const finalDeltaX = touchState.currentX - touchState.startX;
   const SWIPE_THRESHOLD = 80;
 
-  if (finalDeltaX > SWIPE_THRESHOLD && item.recommendation !== 'Keep') {
-    emit('toggle-keep', item);
-  } else if (finalDeltaX < -SWIPE_THRESHOLD && item.recommendation !== 'Delete') {
-    emit('toggle-keep', item);
+  if (finalDeltaX > SWIPE_THRESHOLD) {
+    handleSetStatus(item, 'Keep');
+  } else if (finalDeltaX < -SWIPE_THRESHOLD) {
+    handleSetStatus(item, 'Delete');
   }
 
   // Reset with transition
@@ -117,9 +126,11 @@ const handleTouchEnd = (e, item) => {
           <span class="value">{{ totalPhotos }}</span>
         </div>
         <div class="stat-card">
-          <span class="label">TO DELETE</span>
-          <span class="value red">{{ photosToDeleteCount }}</span>
+          <span class="label">TO CLEAN UP</span>
+          <span class="value red">{{ deletionsCount }}</span>
         </div>
+
+
       </div>
 
       <!-- Groups -->
@@ -175,14 +186,14 @@ const handleTouchEnd = (e, item) => {
                   <button 
                     class="ctrl-btn keep" 
                     :class="{ active: item.recommendation === 'Keep' }"
-                    @click="handleToggle(item)"
+                    @click="handleSetStatus(item, 'Keep')"
                   >
                     <Check :size="14" />
                   </button>
                   <button 
                     class="ctrl-btn delete" 
                     :class="{ active: item.recommendation === 'Delete' }"
-                    @click="handleToggle(item)"
+                    @click="handleSetStatus(item, 'Delete')"
                   >
                     <X :size="14" />
                   </button>
@@ -213,8 +224,10 @@ const handleTouchEnd = (e, item) => {
     <div class="bottom-action-bar glass-panel">
       <button class="confirm-btn" @click="$emit('confirm')">
         <Wand2 :size="20" />
-        <span>Confirm {{ photosToDeleteCount }} Deletions</span>
+        <span>Confirm Selection ({{ confirmedCount }})</span>
       </button>
+
+
       <p class="disclaimer">All deleted photos will be moved to Recently Deleted in your Photos app.</p>
     </div>
   </div>

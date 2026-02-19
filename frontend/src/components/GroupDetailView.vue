@@ -10,10 +10,10 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['back', 'toggle-keep', 'set-best']);
+const emit = defineEmits(['back', 'update-status', 'set-best']);
 
-const handleToggleKeep = (item) => {
-  emit('toggle-keep', item);
+const handleSetStatus = (item, status) => {
+  emit('update-status', item, status);
 };
 
 const handleSetBest = (item) => {
@@ -73,14 +73,14 @@ const handleSetBest = (item) => {
               <button 
                 class="action-btn keep" 
                 :class="{ active: item.recommendation === 'Keep' }"
-                @click="handleToggleKeep(item)"
+                @click="handleSetStatus(item, 'Keep')"
               >
                 <Check :size="20" />
               </button>
               <button 
                 class="action-btn delete" 
                 :class="{ active: item.recommendation === 'Delete' }"
-                @click="handleToggleKeep(item)"
+                @click="handleSetStatus(item, 'Delete')"
               >
                 <X :size="20" />
               </button>

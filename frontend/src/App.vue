@@ -6,7 +6,9 @@ import ActionButton from './components/ActionButton.vue';
 import AnalyzingView from './components/AnalyzingView.vue';
 import ResultsView from './components/ResultsView.vue';
 import GroupDetailView from './components/GroupDetailView.vue';
-import SuccessView from './components/SuccessView.vue'; // Added SuccessView
+import SuccessView from './components/SuccessView.vue';
+import LibraryView from './components/LibraryView.vue';
+import SettingsView from './components/SettingsView.vue';
 import { Info } from 'lucide-vue-next';
 import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
@@ -73,9 +75,11 @@ const analyzePhotos = async () => {
       ...group,
       items: group.items.map(item => ({
         ...item,
-        blobUrl: fileBlobUrls.value[item.filename]
+        blobUrl: fileBlobUrls.value[item.filename],
+        isConfirmed: false // Initial state
       }))
     }));
+
     
     analysisResults.value = groupedResults;
     sessionStorage.setItem('analysisResults', JSON.stringify(groupedResults));
@@ -89,29 +93,39 @@ const analyzePhotos = async () => {
 
 // --- Phase 1 Handlers ---
 
-const handleToggleKeep = (item) => {
-  // Find the item in the grouped results
-  analysisResults.value.forEach(group => {
-    const target = group.items.find(r => r.filename === item.filename);
-    if (target) {
-      target.recommendation = target.recommendation === 'Keep' ? 'Delete' : 'Keep';
-    }
+const handleUpdateStatus = (item, status) => {
+  analysisResults.value = analysisResults.value.map(group => ({
+    ...group,
+    items: group.items.map(r => {
+      if (r.filename === item.filename) {
+        return { ...r, recommendation: status, isConfirmed: true };
+      }
+      return r;
+    })
+  }));
+  saveResults();
+};
+
+
+
+const handleSetBest = (item) => {
+  analysisResults.value = analysisResults.value.map(group => {
+    const hasItem = group.items.some(r => r.filename === item.filename);
+    if (!hasItem) return group;
+    
+    return {
+      ...group,
+      items: group.items.map(r => ({
+        ...r,
+        isBest: r.filename === item.filename,
+        isConfirmed: true // Choosing a best shot confirms the decision
+      }))
+
+    };
   });
   saveResults();
 };
 
-const handleSetBest = (item) => {
-  // Find the group containing this item
-  analysisResults.value.forEach(group => {
-    const hasItem = group.items.some(r => r.filename === item.filename);
-    if (hasItem) {
-      group.items.forEach(r => {
-        r.isBest = (r.filename === item.filename);
-      });
-    }
-  });
-  saveResults();
-};
 
 const confirmDeletions = () => {
   currentView.value = 'success';
@@ -120,19 +134,23 @@ const confirmDeletions = () => {
 const handleSmartClean = () => {
   if (!analysisResults.value) return;
   
-  analysisResults.value.forEach(group => {
-    // If it's a similar set (multiple items)
-    if (group.items.length > 1) {
-      // 1. Ensure the 'Best Shot' is marked Keep
-      // 2. Mark all others as Delete
-      group.items.forEach(item => {
-        item.recommendation = item.isBest ? 'Keep' : 'Delete';
-      });
-    }
+  analysisResults.value = analysisResults.value.map(group => {
+    if (group.items.length <= 1) return group;
+    
+    return {
+      ...group,
+      items: group.items.map(item => ({
+        ...item,
+        recommendation: item.isBest ? 'Keep' : 'Delete',
+        isConfirmed: true // Smart clean confirms everything in the group
+      }))
+
+    };
   });
   
   saveResults();
 };
+
 
 const handleFinish = () => {
   handleBackToUpload();
@@ -161,6 +179,10 @@ const handleNextGroup = () => {
 const handleBackToResults = () => {
   currentView.value = 'results';
   selectedGroup.value = null;
+};
+
+const handleNavigate = (view) => {
+  currentView.value = view;
 };
 
 const successStats = computed(() => {
@@ -203,7 +225,25 @@ const saveResults = () => {
               <ActionButton @click="analyzePhotos" />
             </div>
           </main>
-          <BottomNav />
+          <BottomNav :active-view="currentView" @navigate="handleNavigate" />
+        </template>
+
+        <!-- Library View -->
+        <template v-else-if="currentView === 'library'">
+          <TopBar />
+          <main class="content-area">
+            <LibraryView />
+          </main>
+          <BottomNav :active-view="currentView" @navigate="handleNavigate" />
+        </template>
+
+        <!-- Settings View -->
+        <template v-else-if="currentView === 'settings'">
+          <TopBar />
+          <main class="content-area">
+            <SettingsView />
+          </main>
+          <BottomNav :active-view="currentView" @navigate="handleNavigate" />
         </template>
 
         <!-- Analyzing View -->
@@ -219,9 +259,10 @@ const saveResults = () => {
             @back="handleBackToUpload"
             @confirm="confirmDeletions"
             @view-group="handleViewGroup"
-            @toggle-keep="handleToggleKeep"
+            @update-status="handleUpdateStatus"
             @smart-clean="handleSmartClean"
           />
+
         </template>
 
         <!-- Group Detail View -->
@@ -229,9 +270,10 @@ const saveResults = () => {
           <GroupDetailView
             :group="selectedGroup"
             @back="handleNextGroup"
-            @toggle-keep="handleToggleKeep"
+            @update-status="handleUpdateStatus"
             @set-best="handleSetBest"
           />
+
         </template>
 
         <!-- Success View -->
