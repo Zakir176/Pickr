@@ -311,7 +311,7 @@ const saveResults = () => {
   padding: 0 16px;
   overflow-y: auto;
   width: 100%;
-  max-width: 800px;
+  max-width: 100%;
   margin: 0 auto;
 }
 
