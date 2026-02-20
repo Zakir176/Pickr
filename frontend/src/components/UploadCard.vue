@@ -55,7 +55,12 @@ const handleFileChange = (event) => {
   margin: 16px;
   flex-grow: 1; /* Fill available space */
   justify-content: center;
-  transition: var(--transition);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.upload-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
 }
 
 @media (min-width: 768px) {
@@ -77,6 +82,7 @@ const handleFileChange = (event) => {
   justify-content: center;
   margin-bottom: 24px;
   position: relative;
+  animation: pulse-soft 3s infinite ease-in-out;
 }
 
 .plus-badge {
@@ -114,6 +120,7 @@ p {
 
 .browse-btn:hover {
   background-color: #DBEAFE;
+  transform: scale(1.05);
 }
 
 .hidden-input {
