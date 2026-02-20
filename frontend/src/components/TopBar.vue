@@ -21,7 +21,7 @@ import AppLogo from './AppLogo.vue';
   padding: 16px 24px;
   z-index: 100;
   width: 100%;
-  max-width: 1200px;
+  width: 100%;
   margin: 0 auto;
 }
 
