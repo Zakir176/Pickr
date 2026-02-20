@@ -53,7 +53,7 @@ const handleNavigate = (view) => {
   z-index: 100;
   box-shadow: 0 -4px 12px rgba(0,0,0,0.03);
   width: 100%;
-  max-width: 480px; /* Keep nav compact even on desktop */
+  max-width: 100%; /* Fluid width for responsive layout */
   margin: 0 auto;
   border-radius: 24px 24px 0 0;
 }
