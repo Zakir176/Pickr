@@ -25,7 +25,7 @@ body {
 
 #app {
   width: 100%;
-  max-width: 1200px; /* Increased from 480px for desktop */
+  max-width: 100%; /* fluid width */
   margin: 0 auto;
   min-height: 100vh;
   background-color: var(--white); /* Changed to white for better desktop contrast */

@@ -209,7 +209,7 @@ const saveResults = () => {
 </script>
 
 <template>
-  <div class="app-container">
+  <div class="app-container container">
     <transition name="fade" mode="out-in">
       <div :key="currentView" class="view-wrapper">
         <!-- Upload View -->
