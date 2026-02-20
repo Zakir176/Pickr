@@ -89,3 +89,36 @@ button:active {
 .mt-4 {
   margin-top: 16px;
 }
+
+/* Container utility for centered content with max width */
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* Responsive grid utility */
+.grid-responsive {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+/* Tablet breakpoint */
+@media (max-width: 1199px) {
+  .container {
+    max-width: 960px;
+  }
+}
+
+/* Mobile breakpoint */
+@media (max-width: 767px) {
+  .container {
+    max-width: 100%;
+    padding: 0 8px;
+  }
+  .grid-responsive {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+}
