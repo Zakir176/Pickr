@@ -84,8 +84,12 @@ const handleNavigate = (view) => {
   letter-spacing: 0.8px;
 }
 
+.nav-item:hover {
+  color: var(--text-primary);
+}
+
 .nav-item.active {
   color: var(--primary-blue);
-  transform: translateY(-2px);
+  transform: translateY(-4px) scale(1.05);
 }
 </style>
