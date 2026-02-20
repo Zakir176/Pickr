@@ -144,7 +144,7 @@ const handleTouchEnd = (e, item) => {
         </div>
 
         <transition name="fade">
-          <div v-if="!collapsedGroups[group.title]" class="photo-grid">
+          <div v-if="!collapsedGroups[group.title]" class="grid-responsive photo-grid-spacing">
             <div 
               v-for="(item, i) in group.items" :key="i" 
               class="photo-card" 
@@ -404,29 +404,6 @@ h1 {
   left: 10px;
 }
 
-.photo-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-}
-
-@media (min-width: 640px) {
-  .photo-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (min-width: 960px) {
-  .photo-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-@media (min-width: 1100px) {
-  .photo-grid {
-    grid-template-columns: repeat(5, 1fr);
-  }
-}
 
 .group-section {
   margin-bottom: 32px;
