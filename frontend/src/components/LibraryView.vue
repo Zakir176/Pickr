@@ -98,6 +98,12 @@ const stats = ref({
   display: flex;
   align-items: center;
   gap: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
 }
 
 .stat-info {
@@ -155,7 +161,12 @@ h3 {
   align-items: center;
   gap: 12px;
   cursor: pointer;
-  transition: var(--transition);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.history-item:hover {
+  transform: scale(1.02);
+  box-shadow: var(--shadow);
 }
 
 .history-item:active {
