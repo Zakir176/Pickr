@@ -1,6 +1,7 @@
 <script setup>
 import { ChevronLeft, Wand2, ChevronDown, Download, Check, X } from 'lucide-vue-next';
 import StatusBadge from './StatusBadge.vue';
+import BestShotBadge from './BestShotBadge.vue';
 import { computed, ref, reactive } from 'vue';
 
 const props = defineProps({
@@ -14,7 +15,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['back', 'confirm', 'view-group', 'update-status', 'smart-clean']);
+const emit = defineEmits(['back', 'confirm', 'view-group', 'update-status', 'smart-clean', 'set-best']);
 
 // Local state for collapsed groups
 const collapsedGroups = ref({});
@@ -54,6 +55,10 @@ const getQualityLabel = (score) => {
 
 const handleSetStatus = (item, status) => {
   emit('update-status', item, status);
+};
+
+const handleSetBest = (item) => {
+  emit('set-best', item);
 };
 
 // Smoother Swipe Gestures
@@ -112,7 +117,7 @@ const handleTouchEnd = (e, item) => {
         <ChevronLeft :size="24" />
       </button>
       <h1>Curation Results</h1>
-      <button class="smart-btn" @click="$emit('smart-clean')">
+      <button class="smart-btn" @click="$emit('smart-clean')" aria-label="Smart Clean Bulk Action" title="Smart Clean">
         <Wand2 :size="16" />
         <span>Smart Clean</span>
       </button>
@@ -173,11 +178,16 @@ const handleTouchEnd = (e, item) => {
                   <Download :size="16" color="white" />
                 </button>
 
-                <!-- Badge Overlay -->
                 <div class="badge-overlay">
                   <StatusBadge
                     :status="item.error ? 'Error' : item.recommendation"
                     :error-message="item.error"
+                  />
+                  <BestShotBadge 
+                    v-if="item.isBest" 
+                    :isBest="true" 
+                    @toggle="handleSetBest(item)" 
+                    style="margin-top: 8px;"
                   />
                 </div>
 
@@ -187,6 +197,7 @@ const handleTouchEnd = (e, item) => {
                     class="ctrl-btn keep" 
                     :class="{ active: item.recommendation === 'Keep' }"
                     @click="handleSetStatus(item, 'Keep')"
+                    aria-label="Keep Photo"
                   >
                     <Check :size="14" />
                   </button>
@@ -194,6 +205,7 @@ const handleTouchEnd = (e, item) => {
                     class="ctrl-btn delete" 
                     :class="{ active: item.recommendation === 'Delete' }"
                     @click="handleSetStatus(item, 'Delete')"
+                    aria-label="Delete Photo"
                   >
                     <X :size="14" />
                   </button>

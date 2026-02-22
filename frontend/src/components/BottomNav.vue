@@ -1,5 +1,6 @@
 <script setup>
 import { CloudUpload, Image as ImageIcon, Settings } from 'lucide-vue-next';
+import { onMounted, onUnmounted } from 'vue';
 
 const props = defineProps({
   activeView: {
@@ -13,6 +14,54 @@ const emit = defineEmits(['navigate']);
 const handleNavigate = (view) => {
   emit('navigate', view);
 };
+
+// Global Swipe Navigation
+const VIEWS = ['upload', 'library', 'settings'];
+
+let startX = 0;
+let startY = 0;
+
+const handleTouchStart = (e) => {
+  startX = e.touches[0].clientX;
+  startY = e.touches[0].clientY;
+};
+
+const handleTouchEnd = (e) => {
+  if (!startX || !startY) return;
+  
+  const endX = e.changedTouches[0].clientX;
+  const endY = e.changedTouches[0].clientY;
+  
+  const deltaX = endX - startX;
+  const deltaY = endY - startY;
+  
+  // Ensure the swipe is mostly horizontal
+  if (Math.abs(deltaX) > 80 && Math.abs(deltaY) < 50) {
+    const currentIndex = VIEWS.indexOf(props.activeView);
+    if (currentIndex === -1) return; // if active view isn't one of the main tabs, don't swipe navigate
+    
+    if (deltaX > 0 && currentIndex > 0) {
+      // Swipe Right -> Go to previous view
+      handleNavigate(VIEWS[currentIndex - 1]);
+    } else if (deltaX < 0 && currentIndex < VIEWS.length - 1) {
+      // Swipe Left -> Go to next view
+      handleNavigate(VIEWS[currentIndex + 1]);
+    }
+  }
+  
+  startX = 0;
+  startY = 0;
+};
+
+onMounted(() => {
+  window.addEventListener('touchstart', handleTouchStart);
+  window.addEventListener('touchend', handleTouchEnd);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('touchstart', handleTouchStart);
+  window.removeEventListener('touchend', handleTouchEnd);
+});
 </script>
 
 <template>
