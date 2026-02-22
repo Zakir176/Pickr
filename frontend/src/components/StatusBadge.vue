@@ -4,8 +4,9 @@ import { CheckCircle, Trash2, Eye, AlertCircle } from 'lucide-vue-next';
 const props = defineProps({
   status: {
     type: String,
-    required: true, // 'Keep', 'Delete', 'Review', 'Error'
-    validator: (value) => ['Keep', 'Delete', 'Review', 'High Quality', 'Med Quality', 'Low Quality', 'Error'].includes(value)
+    required: false,
+    default: 'Review',
+    validator: (value) => !value || ['Keep', 'Delete', 'Review', 'High Quality', 'Med Quality', 'Low Quality', 'Error'].includes(value)
   },
   type: {
     type: String,
@@ -39,14 +40,14 @@ const getColorClass = () => {
 </script>
 
 <template>
-  <div v-if="['Keep', 'Delete', 'Review', 'Error'].includes(status)" class="status-badge" :class="getColorClass()">
+  <div v-if="['Keep', 'Delete', 'Review', 'Error'].includes(status || 'Review')" class="status-badge" :class="getColorClass()">
     <component :is="getIcon()" :size="12" stroke-width="3" />
     <span v-if="status !== 'Error'">{{ status.toUpperCase() }}</span>
     <span v-else>{{ errorMessage ? 'ERROR: ' + errorMessage.toUpperCase() : 'ERROR' }}</span>
   </div>
   
   <div v-else class="quality-label">
-    {{ status.toUpperCase() }}
+    {{ (status || 'Unknown').toUpperCase() }}
   </div>
 </template>
 
