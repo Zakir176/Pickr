@@ -94,35 +94,32 @@ const analyzePhotos = async () => {
 // --- Phase 1 Handlers ---
 
 const handleUpdateStatus = (item, status) => {
-  analysisResults.value = analysisResults.value.map(group => ({
-    ...group,
-    items: group.items.map(r => {
-      if (r.filename === item.filename) {
-        return { ...r, recommendation: status, isConfirmed: true };
-      }
-      return r;
-    })
-  }));
+  if (!analysisResults.value) return;
+  for (const group of analysisResults.value) {
+    const target = group.items.find(r => r.filename === item.filename);
+    if (target) {
+      target.recommendation = status;
+      target.isConfirmed = true;
+      break;
+    }
+  }
   saveResults();
 };
 
 
 
 const handleSetBest = (item) => {
-  analysisResults.value = analysisResults.value.map(group => {
+  if (!analysisResults.value) return;
+  for (const group of analysisResults.value) {
     const hasItem = group.items.some(r => r.filename === item.filename);
-    if (!hasItem) return group;
-    
-    return {
-      ...group,
-      items: group.items.map(r => ({
-        ...r,
-        isBest: r.filename === item.filename,
-        isConfirmed: true // Choosing a best shot confirms the decision
-      }))
-
-    };
-  });
+    if (hasItem) {
+      group.items.forEach(r => {
+        r.isBest = r.filename === item.filename;
+        r.isConfirmed = true; // Choosing a best shot confirms the decision
+      });
+      break;
+    }
+  }
   saveResults();
 };
 
@@ -261,6 +258,7 @@ const saveResults = () => {
             @view-group="handleViewGroup"
             @update-status="handleUpdateStatus"
             @smart-clean="handleSmartClean"
+            @set-best="handleSetBest"
           />
 
         </template>
