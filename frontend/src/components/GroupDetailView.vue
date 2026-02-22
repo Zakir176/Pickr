@@ -1,7 +1,8 @@
 <script setup>
-import { ChevronLeft, Check, X, Star } from 'lucide-vue-next';
-import { computed } from 'vue';
+import { ChevronLeft, Check, X } from 'lucide-vue-next';
+import { computed, ref, reactive } from 'vue';
 import StatusBadge from './StatusBadge.vue';
+import BestShotBadge from './BestShotBadge.vue';
 
 const props = defineProps({
   group: {
@@ -18,6 +19,51 @@ const handleSetStatus = (item, status) => {
 
 const handleSetBest = (item) => {
   emit('set-best', item);
+};
+
+// Smoother Swipe Gestures
+const activeSwipeIndex = ref(null);
+const swipeOffsets = reactive({}); // filename -> number
+
+const touchState = {
+  startX: 0,
+  currentX: 0,
+  isSwiping: false
+};
+
+const handleTouchStart = (e, filename) => {
+  touchState.startX = e.touches[0].clientX;
+  touchState.isSwiping = true;
+  activeSwipeIndex.value = filename;
+};
+
+const handleTouchMove = (e, filename) => {
+  if (!touchState.isSwiping || activeSwipeIndex.value !== filename) return;
+  touchState.currentX = e.touches[0].clientX;
+  const deltaX = touchState.currentX - touchState.startX;
+  
+  if (Math.abs(deltaX) > 100) {
+    swipeOffsets[filename] = deltaX > 0 ? 100 + (deltaX - 100) * 0.2 : -100 + (deltaX + 100) * 0.2;
+  } else {
+    swipeOffsets[filename] = deltaX;
+  }
+};
+
+const handleTouchEnd = (e, item) => {
+  if (!touchState.isSwiping) return;
+  
+  const finalDeltaX = touchState.currentX - touchState.startX;
+  const SWIPE_THRESHOLD = 80;
+
+  if (finalDeltaX > SWIPE_THRESHOLD) {
+    handleSetStatus(item, 'Keep');
+  } else if (finalDeltaX < -SWIPE_THRESHOLD) {
+    handleSetStatus(item, 'Delete');
+  }
+
+  swipeOffsets[item.filename] = 0;
+  touchState.isSwiping = false;
+  activeSwipeIndex.value = null;
 };
 </script>
 
@@ -39,24 +85,23 @@ const handleSetBest = (item) => {
       <transition-group name="slide-up" appear>
         <div v-for="(item, index) in group.items" :key="item.filename" class="item-card" :style="{ transitionDelay: `${index * 0.1}s` }">
           <div class="image-container">
-            <img :src="item.blobUrl" class="photo-img" :alt="item.filename" loading="lazy" />
-            
-            <!-- Overlays -->
-            <div class="badge-row top">
-               <StatusBadge :status="item.recommendation" />
-               <button 
-                  class="best-shot-indicator" 
-                  :class="{ active: item.isBest }"
-                  @click="handleSetBest(item)"
-               >
-                 <Star 
-                   :size="16" 
-                   :fill="item.isBest ? '#FBBF24' : 'none'" 
-                   :color="item.isBest ? '#FBBF24' : 'white'" 
-                   :class="{ 'glow-star': item.isBest }"
+            <div 
+              class="photo-inner"
+              :style="{ transform: `translateX(${swipeOffsets[item.filename] || 0}px)` }"
+              @touchstart="handleTouchStart($event, item.filename)"
+              @touchmove="handleTouchMove($event, item.filename)"
+              @touchend="handleTouchEnd($event, item)"
+            >
+              <img :src="item.blobUrl" class="photo-img" :alt="item.filename" loading="lazy" />
+              
+              <!-- Overlays -->
+              <div class="badge-row top">
+                 <StatusBadge :status="item.recommendation" />
+                 <BestShotBadge 
+                   :isBest="item.isBest" 
+                   @toggle="handleSetBest(item)" 
                  />
-                 <span v-if="item.isBest">Best Shot</span>
-               </button>
+              </div>
             </div>
           </div>
 
@@ -74,6 +119,7 @@ const handleSetBest = (item) => {
                 class="action-btn keep" 
                 :class="{ active: item.recommendation === 'Keep' }"
                 @click="handleSetStatus(item, 'Keep')"
+                aria-label="Keep Photo"
               >
                 <Check :size="20" />
               </button>
@@ -81,6 +127,7 @@ const handleSetBest = (item) => {
                 class="action-btn delete" 
                 :class="{ active: item.recommendation === 'Delete' }"
                 @click="handleSetStatus(item, 'Delete')"
+                aria-label="Delete Photo"
               >
                 <X :size="20" />
               </button>
@@ -185,37 +232,15 @@ h1 {
   align-items: center;
 }
 
-.best-shot-indicator {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px);
-  padding: 8px 16px;
-  border-radius: 100px;
-  color: white;
-  font-size: 12px;
-  font-weight: 700;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+.photo-inner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transition: transform 0.1s ease-out;
 }
 
-.best-shot-indicator.active {
-  background: rgba(251, 191, 36, 0.3);
-  border-color: #FBBF24;
-  color: #FBBF24;
-  box-shadow: 0 0 20px rgba(251, 191, 36, 0.4);
-  transform: scale(1.05);
-}
-
-.glow-star {
-  filter: drop-shadow(0 0 8px #FBBF24);
-  animation: star-pulse 2s infinite ease-in-out;
-}
-
-@keyframes star-pulse {
-  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 4px #FBBF24); }
-  50% { transform: scale(1.2); filter: drop-shadow(0 0 12px #FBBF24); }
+.photo-inner[style*="translateX(0px)"] {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .info-row {
