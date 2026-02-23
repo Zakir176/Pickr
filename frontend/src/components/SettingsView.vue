@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue';
-import { Shield, Zap, Moon, Sun, Monitor, Trash2, Info, ChevronRight } from 'lucide-vue-next';
+import { Moon, Sun, Monitor, Trash2 } from 'lucide-vue-next';
 
 const settings = ref({
   similarityThreshold: 85,
@@ -43,7 +43,9 @@ const clearStorage = () => {
     </header>
 
     <section class="settings-group">
-      <div class="group-label">AI DETECTION</div>
+      <div class="group-label">
+        AI DETECTION
+      </div>
       <div class="settings-card glass-panel">
         <div class="setting-item">
           <div class="setting-info">
@@ -51,12 +53,18 @@ const clearStorage = () => {
             <span class="description">How strict to be with duplicates</span>
           </div>
           <div class="setting-control">
-            <input type="range" v-model="settings.similarityThreshold" min="50" max="95" class="slider" />
+            <input
+              v-model="settings.similarityThreshold"
+              type="range"
+              min="50"
+              max="95"
+              class="slider"
+            >
             <span class="value">{{ settings.similarityThreshold }}%</span>
           </div>
         </div>
         
-        <div class="divider"></div>
+        <div class="divider" />
 
         <div class="setting-item">
           <div class="setting-info">
@@ -64,7 +72,13 @@ const clearStorage = () => {
             <span class="description">How strict to be with blurry shots</span>
           </div>
           <div class="setting-control">
-            <input type="range" v-model="settings.blurThreshold" min="10" max="90" class="slider" />
+            <input
+              v-model="settings.blurThreshold"
+              type="range"
+              min="10"
+              max="90"
+              class="slider"
+            >
             <span class="value">{{ settings.blurThreshold }}%</span>
           </div>
         </div>
@@ -72,7 +86,9 @@ const clearStorage = () => {
     </section>
 
     <section class="settings-group">
-      <div class="group-label">WORKFLOW</div>
+      <div class="group-label">
+        WORKFLOW
+      </div>
       <div class="settings-card glass-panel">
         <div class="setting-item">
           <div class="setting-info">
@@ -81,22 +97,32 @@ const clearStorage = () => {
           </div>
           <div class="setting-control">
             <label class="switch">
-              <input type="checkbox" v-model="settings.autoAdvance">
-              <span class="toggle-slider"></span>
+              <input
+                v-model="settings.autoAdvance"
+                type="checkbox"
+              >
+              <span class="toggle-slider" />
             </label>
           </div>
         </div>
         
-        <div class="divider"></div>
+        <div class="divider" />
 
         <div class="setting-item">
           <div class="setting-info">
             <span class="title">Deletion Strategy</span>
           </div>
           <div class="setting-control">
-            <select v-model="settings.deletionStrategy" class="select-input">
-              <option value="trash">Move to Trash</option>
-              <option value="permanent">Permanent Delete</option>
+            <select
+              v-model="settings.deletionStrategy"
+              class="select-input"
+            >
+              <option value="trash">
+                Move to Trash
+              </option>
+              <option value="permanent">
+                Permanent Delete
+              </option>
             </select>
           </div>
         </div>
@@ -104,7 +130,9 @@ const clearStorage = () => {
     </section>
 
     <section class="settings-group">
-      <div class="group-label">APPEARANCE</div>
+      <div class="group-label">
+        APPEARANCE
+      </div>
       <div class="theme-selector glass-panel">
         <button 
           v-for="mode in ['light', 'dark', 'system']" 
@@ -113,17 +141,31 @@ const clearStorage = () => {
           :class="{ active: settings.theme === mode }"
           @click="settings.theme = mode"
         >
-          <Sun v-if="mode === 'light'" :size="18" />
-          <Moon v-if="mode === 'dark'" :size="18" />
-          <Monitor v-if="mode === 'system'" :size="18" />
+          <Sun
+            v-if="mode === 'light'"
+            :size="18"
+          />
+          <Moon
+            v-if="mode === 'dark'"
+            :size="18"
+          />
+          <Monitor
+            v-if="mode === 'system'"
+            :size="18"
+          />
           <span>{{ mode.charAt(0).toUpperCase() + mode.slice(1) }}</span>
         </button>
       </div>
     </section>
 
     <section class="settings-group">
-      <div class="group-label">DANGER ZONE</div>
-      <button class="danger-button glass-panel" @click="clearStorage">
+      <div class="group-label">
+        DANGER ZONE
+      </div>
+      <button
+        class="danger-button glass-panel"
+        @click="clearStorage"
+      >
         <Trash2 :size="18" />
         <span>Clear Storage & Reset</span>
       </button>
