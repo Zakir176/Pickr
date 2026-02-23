@@ -9,7 +9,7 @@ import AppLogo from './AppLogo.vue';
       <ChevronLeft :size="24" />
     </button>
     <AppLogo />
-    <div class="spacer"></div>
+    <div class="spacer" />
   </header>
 </template>
 
