@@ -40,13 +40,24 @@ const getColorClass = () => {
 </script>
 
 <template>
-  <div v-if="['Keep', 'Delete', 'Review', 'Error'].includes(status || 'Review')" class="status-badge" :class="getColorClass()">
-    <component :is="getIcon()" :size="12" stroke-width="3" />
+  <div
+    v-if="['Keep', 'Delete', 'Review', 'Error'].includes(status || 'Review')"
+    class="status-badge"
+    :class="getColorClass()"
+  >
+    <component
+      :is="getIcon()"
+      :size="12"
+      stroke-width="3"
+    />
     <span v-if="status !== 'Error'">{{ status.toUpperCase() }}</span>
     <span v-else>{{ errorMessage ? 'ERROR: ' + errorMessage.toUpperCase() : 'ERROR' }}</span>
   </div>
   
-  <div v-else class="quality-label">
+  <div
+    v-else
+    class="quality-label"
+  >
     {{ (status || 'Unknown').toUpperCase() }}
   </div>
 </template>
