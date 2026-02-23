@@ -1,8 +1,8 @@
 <script setup>
 import { CheckCircle2, Share2, Trash2 } from 'lucide-vue-next';
-import { computed } from 'vue';
+// No computed needed
 
-const props = defineProps({
+defineProps({
   stats: {
     type: Object,
     default: () => ({
@@ -12,25 +12,30 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['finish']);
+defineEmits(['finish']);
 </script>
 
 <template>
   <div class="success-view">
     <div class="content">
       <div class="icon-circle">
-        <CheckCircle2 :size="64" color="#10B981" />
+        <CheckCircle2
+          :size="64"
+          color="#10B981"
+        />
       </div>
       
       <h1>Gallery Cleaned!</h1>
-      <p class="description">You've successfully curated your latest photos and kept only the best shots.</p>
+      <p class="description">
+        You've successfully curated your latest photos and kept only the best shots.
+      </p>
       
       <div class="stats-card">
         <div class="stat-item">
           <span class="stat-value text-red">{{ stats.deletedCount }}</span>
           <span class="stat-label">Photos Deleted</span>
         </div>
-        <div class="divider"></div>
+        <div class="divider" />
         <div class="stat-item">
           <span class="stat-value">{{ stats.spaceSaved }}</span>
           <span class="stat-label">Space Saved</span>
@@ -50,7 +55,12 @@ const emit = defineEmits(['finish']);
         <Share2 :size="20" />
         <span>Share Results</span>
       </button>
-      <button class="finish-btn" @click="$emit('finish')">Finish</button>
+      <button
+        class="finish-btn"
+        @click="$emit('finish')"
+      >
+        Finish
+      </button>
     </div>
   </div>
 </template>
