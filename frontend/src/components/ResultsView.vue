@@ -3,6 +3,7 @@ import { ChevronLeft, Wand2, ChevronDown, Download, Check, X } from 'lucide-vue-
 import StatusBadge from './StatusBadge.vue';
 import BestShotBadge from './BestShotBadge.vue';
 import { computed, ref, reactive } from 'vue';
+import { getQualityLabel } from '../utils';
 
 const props = defineProps({
   groups: {
@@ -47,11 +48,7 @@ const deletionsCount = computed(() => {
 
 
 
-const getQualityLabel = (score) => {
-  if (score > 0.8) return 'High Quality';
-  if (score > 0.5) return 'Med Quality';
-  return 'Low Quality';
-};
+// Quality labeling moved to utils.js
 
 const handleSetStatus = (item, status) => {
   emit('update-status', item, status);
@@ -113,11 +110,19 @@ const handleTouchEnd = (e, item) => {
   <div class="results-view">
     <!-- Header -->
     <header class="top-bar glass-panel">
-      <button class="icon-btn" @click="$emit('back')">
+      <button
+        class="icon-btn"
+        @click="$emit('back')"
+      >
         <ChevronLeft :size="24" />
       </button>
       <h1>Curation Results</h1>
-      <button class="smart-btn" @click="$emit('smart-clean')" aria-label="Smart Clean Bulk Action" title="Smart Clean">
+      <button
+        class="smart-btn"
+        aria-label="Smart Clean Bulk Action"
+        title="Smart Clean"
+        @click="$emit('smart-clean')"
+      >
         <Wand2 :size="16" />
         <span>Smart Clean</span>
       </button>
@@ -134,24 +139,40 @@ const handleTouchEnd = (e, item) => {
           <span class="label">TO CLEAN UP</span>
           <span class="value red">{{ deletionsCount }}</span>
         </div>
-
-
       </div>
 
       <!-- Groups -->
-      <div v-for="(group, idx) in groups" :key="idx" class="group-section">
-        <div class="group-header clickable" @click="toggleGroup(group.title)">
+      <div
+        v-for="(group, idx) in groups"
+        :key="idx"
+        class="group-section"
+      >
+        <div
+          class="group-header clickable"
+          @click="toggleGroup(group.title)"
+        >
           <h3>{{ group.title }}</h3>
           <div class="group-header-right">
-            <span class="sub-text" v-if="group.items.length > 1">Best match selected</span>
-            <ChevronDown :class="{ 'rotate-180': collapsedGroups[group.title] }" :size="20" class="chevron-icon" />
+            <span
+              v-if="group.items.length > 1"
+              class="sub-text"
+            >Best match selected</span>
+            <ChevronDown
+              :class="{ 'rotate-180': collapsedGroups[group.title] }"
+              :size="20"
+              class="chevron-icon"
+            />
           </div>
         </div>
 
         <transition name="fade">
-          <div v-if="!collapsedGroups[group.title]" class="grid-responsive photo-grid-spacing">
+          <div
+            v-if="!collapsedGroups[group.title]"
+            class="grid-responsive photo-grid-spacing"
+          >
             <div 
-              v-for="(item, i) in group.items" :key="i" 
+              v-for="(item, i) in group.items"
+              :key="i" 
               class="photo-card" 
               @click="$emit('view-group', group)"
             >
@@ -168,14 +189,24 @@ const handleTouchEnd = (e, item) => {
                   class="photo-img" 
                   alt="Analyzed photo" 
                   loading="lazy"
-                />
-                <div v-else class="img-placeholder">
-                   <span class="filename">{{ item.filename }}</span>
+                >
+                <div
+                  v-else
+                  class="img-placeholder"
+                >
+                  <span class="filename">{{ item.filename }}</span>
                 </div>
                 
                 <!-- Download Button -->
-                <button v-if="item.blobUrl" class="download-btn" @click.stop="downloadPhoto(item.blobUrl, item.filename)">
-                  <Download :size="16" color="white" />
+                <button
+                  v-if="item.blobUrl"
+                  class="download-btn"
+                  @click.stop="downloadPhoto(item.blobUrl, item.filename)"
+                >
+                  <Download
+                    :size="16"
+                    color="white"
+                  />
                 </button>
 
                 <div class="badge-overlay">
@@ -185,27 +216,30 @@ const handleTouchEnd = (e, item) => {
                   />
                   <BestShotBadge 
                     v-if="item.isBest" 
-                    :isBest="true" 
-                    @toggle="handleSetBest(item)" 
-                    style="margin-top: 8px;"
+                    :is-best="true" 
+                    style="margin-top: 8px;" 
+                    @toggle="handleSetBest(item)"
                   />
                 </div>
 
                 <!-- Manual Toggle Controls -->
-                <div class="control-overlay" @click.stop>
+                <div
+                  class="control-overlay"
+                  @click.stop
+                >
                   <button 
                     class="ctrl-btn keep" 
                     :class="{ active: item.recommendation === 'Keep' }"
-                    @click="handleSetStatus(item, 'Keep')"
                     aria-label="Keep Photo"
+                    @click="handleSetStatus(item, 'Keep')"
                   >
                     <Check :size="14" />
                   </button>
                   <button 
                     class="ctrl-btn delete" 
                     :class="{ active: item.recommendation === 'Delete' }"
-                    @click="handleSetStatus(item, 'Delete')"
                     aria-label="Delete Photo"
+                    @click="handleSetStatus(item, 'Delete')"
                   >
                     <X :size="14" />
                   </button>
@@ -213,34 +247,54 @@ const handleTouchEnd = (e, item) => {
                 
                 <!-- Quality Label -->
                 <div class="quality-overlay">
-                  <StatusBadge :status="getQualityLabel(item.final_score)" type="label" />
+                  <StatusBadge
+                    :status="getQualityLabel(item.final_score)"
+                    type="label"
+                  />
                 </div>
               </div>
               
               <!-- Swipe Background Indicators -->
-              <div class="swipe-bg swipe-keep" :style="{ opacity: (swipeOffsets[item.filename] || 0) / 100 }">
-                <Check :size="32" color="white" />
+              <div
+                class="swipe-bg swipe-keep"
+                :style="{ opacity: (swipeOffsets[item.filename] || 0) / 100 }"
+              >
+                <Check
+                  :size="32"
+                  color="white"
+                />
               </div>
-              <div class="swipe-bg swipe-delete" :style="{ opacity: -(swipeOffsets[item.filename] || 0) / 100 }">
-                <X :size="32" color="white" />
+              <div
+                class="swipe-bg swipe-delete"
+                :style="{ opacity: -(swipeOffsets[item.filename] || 0) / 100 }"
+              >
+                <X
+                  :size="32"
+                  color="white"
+                />
               </div>
             </div>
           </div>
         </transition>
       </div>
       
-      <div class="spacer-bottom"></div>
+      <div class="spacer-bottom" />
     </div>
 
     <!-- Bottom Action Bar -->
     <div class="bottom-action-bar glass-panel">
-      <button class="confirm-btn" @click="$emit('confirm')">
+      <button
+        class="confirm-btn"
+        @click="$emit('confirm')"
+      >
         <Wand2 :size="20" />
         <span>Confirm Selection ({{ confirmedCount }})</span>
       </button>
 
 
-      <p class="disclaimer">All deleted photos will be moved to Recently Deleted in your Photos app.</p>
+      <p class="disclaimer">
+        All deleted photos will be moved to Recently Deleted in your Photos app.
+      </p>
     </div>
   </div>
 </template>

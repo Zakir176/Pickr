@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue';
-import { Clock, HardDrive, Images, Trash2, ChevronRight } from 'lucide-vue-next';
+import { Clock, HardDrive, Images, ChevronRight } from 'lucide-vue-next';
+import { formatSize } from '../utils';
 
 // Mock data for history
 const historyItems = ref([
@@ -10,7 +11,7 @@ const historyItems = ref([
 ]);
 
 const stats = ref({
-  totalSaved: '1.2 GB',
+  totalSaved: formatSize(1240), // 1.2 GB
   photosProcessed: 1450,
   cleanUpRate: '42%'
 });
@@ -22,14 +23,20 @@ const stats = ref({
       <h2>Storage Saved</h2>
       <div class="stats-grid">
         <div class="stat-card glass-panel">
-          <HardDrive class="icon blue" :size="20" />
+          <HardDrive
+            class="icon blue"
+            :size="20"
+          />
           <div class="stat-info">
             <span class="value">{{ stats.totalSaved }}</span>
             <span class="label">Total Saved</span>
           </div>
         </div>
         <div class="stat-card glass-panel">
-          <Images class="icon purple" :size="20" />
+          <Images
+            class="icon purple"
+            :size="20"
+          />
           <div class="stat-info">
             <span class="value">{{ stats.photosProcessed }}</span>
             <span class="label">Processed</span>
@@ -41,11 +48,17 @@ const stats = ref({
     <section class="history-section">
       <div class="section-header">
         <h3>Curation History</h3>
-        <button class="text-button">Clear All</button>
+        <button class="text-button">
+          Clear All
+        </button>
       </div>
       
       <div class="history-list">
-        <div v-for="item in historyItems" :key="item.id" class="history-item glass-panel">
+        <div
+          v-for="item in historyItems"
+          :key="item.id"
+          class="history-item glass-panel"
+        >
           <div class="history-icon">
             <Clock :size="18" />
           </div>
@@ -64,7 +77,10 @@ const stats = ref({
     <section class="keepers-section">
       <h3>The Keepers</h3>
       <div class="empty-state glass-panel">
-        <Images :size="32" class="opacity-50" />
+        <Images
+          :size="32"
+          class="opacity-50"
+        />
         <p>No featured photos yet. Keep curating!</p>
       </div>
     </section>

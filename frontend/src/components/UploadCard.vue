@@ -20,25 +20,33 @@ const handleFileChange = (event) => {
 <template>
   <div class="upload-card">
     <div class="icon-circle">
-      <Camera :size="48" color="#3B82F6" />
-      <div class="plus-badge">+</div>
+      <Camera
+        :size="48"
+        color="#3B82F6"
+      />
+      <div class="plus-badge">
+        +
+      </div>
     </div>
     
     <h2>Select Photos</h2>
     <p>Upload photos to analyze quality<br>and find duplicates automatically</p>
     
-    <button class="browse-btn" @click="triggerFileInput">
+    <button
+      class="browse-btn"
+      @click="triggerFileInput"
+    >
       Browse Gallery
     </button>
     
     <input 
-      type="file" 
       ref="fileInput" 
+      type="file" 
       multiple 
       accept="image/*" 
       class="hidden-input"
       @change="handleFileChange"
-    />
+    >
   </div>
 </template>
 
