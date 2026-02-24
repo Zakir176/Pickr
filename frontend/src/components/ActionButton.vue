@@ -15,7 +15,10 @@ defineProps({
 
 <template>
   <button class="action-btn">
-    <ChartBar :size="20" class="btn-icon" />
+    <ChartBar
+      :size="20"
+      class="btn-icon"
+    />
     <span>{{ label }}</span>
   </button>
 </template>
