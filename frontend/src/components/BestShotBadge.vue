@@ -26,9 +26,9 @@ const handleClick = (e) => {
   <button 
     class="best-shot-indicator" 
     :class="{ active: isBest, readonly: !interactive }"
-    @click="handleClick"
     :aria-label="isBest ? 'Unmark as best shot' : 'Mark as best shot'"
     :disabled="!interactive"
+    @click="handleClick"
   >
     <Star 
       :size="16" 
