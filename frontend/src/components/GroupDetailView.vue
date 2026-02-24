@@ -1,10 +1,10 @@
 <script setup>
 import { ChevronLeft, Check, X } from 'lucide-vue-next';
-import { computed, ref, reactive } from 'vue';
+import { ref, reactive } from 'vue';
 import StatusBadge from './StatusBadge.vue';
 import BestShotBadge from './BestShotBadge.vue';
 
-const props = defineProps({
+defineProps({
   group: {
     type: Object,
     required: true
@@ -71,19 +71,37 @@ const handleTouchEnd = (e, item) => {
   <div class="group-detail">
     <!-- Header -->
     <header class="top-bar glass-panel">
-      <button class="icon-btn" @click="$emit('back')">
+      <button
+        class="icon-btn"
+        @click="$emit('back')"
+      >
         <ChevronLeft :size="24" />
       </button>
       <div class="header-title">
         <h1>Review Group</h1>
-        <p class="sub-text">{{ group.items.length }} items</p>
+        <p class="sub-text">
+          {{ group.items.length }} items
+        </p>
       </div>
-      <button class="done-btn" @click="$emit('back')">Next</button>
+      <button
+        class="done-btn"
+        @click="$emit('back')"
+      >
+        Next
+      </button>
     </header>
 
     <div class="scroll-content">
-      <transition-group name="slide-up" appear>
-        <div v-for="(item, index) in group.items" :key="item.filename" class="item-card" :style="{ transitionDelay: `${index * 0.1}s` }">
+      <transition-group
+        name="slide-up"
+        appear
+      >
+        <div
+          v-for="(item, index) in group.items"
+          :key="item.filename"
+          class="item-card"
+          :style="{ transitionDelay: `${index * 0.1}s` }"
+        >
           <div class="image-container">
             <div 
               class="photo-inner"
@@ -92,15 +110,20 @@ const handleTouchEnd = (e, item) => {
               @touchmove="handleTouchMove($event, item.filename)"
               @touchend="handleTouchEnd($event, item)"
             >
-              <img :src="item.blobUrl" class="photo-img" :alt="item.filename" loading="lazy" />
+              <img
+                :src="item.blobUrl"
+                class="photo-img"
+                :alt="item.filename"
+                loading="lazy"
+              >
               
               <!-- Overlays -->
               <div class="badge-row top">
-                 <StatusBadge :status="item.recommendation" />
-                 <BestShotBadge 
-                   :isBest="item.isBest" 
-                   @toggle="handleSetBest(item)" 
-                 />
+                <StatusBadge :status="item.recommendation" />
+                <BestShotBadge 
+                  :is-best="item.isBest" 
+                  @toggle="handleSetBest(item)" 
+                />
               </div>
             </div>
           </div>
@@ -109,8 +132,8 @@ const handleTouchEnd = (e, item) => {
             <div class="metrics">
               <span class="filename">{{ item.filename }}</span>
               <div class="pills">
-                 <span class="pill">Blur: {{ Math.round(item.score_components.blur * 100) }}%</span>
-                 <span class="pill">Exp: {{ Math.round(item.score_components.exposure * 100) }}%</span>
+                <span class="pill">Blur: {{ Math.round(item.score_components.blur * 100) }}%</span>
+                <span class="pill">Exp: {{ Math.round(item.score_components.exposure * 100) }}%</span>
               </div>
             </div>
             
@@ -118,16 +141,16 @@ const handleTouchEnd = (e, item) => {
               <button 
                 class="action-btn keep" 
                 :class="{ active: item.recommendation === 'Keep' }"
-                @click="handleSetStatus(item, 'Keep')"
                 aria-label="Keep Photo"
+                @click="handleSetStatus(item, 'Keep')"
               >
                 <Check :size="20" />
               </button>
               <button 
                 class="action-btn delete" 
                 :class="{ active: item.recommendation === 'Delete' }"
-                @click="handleSetStatus(item, 'Delete')"
                 aria-label="Delete Photo"
+                @click="handleSetStatus(item, 'Delete')"
               >
                 <X :size="20" />
               </button>
