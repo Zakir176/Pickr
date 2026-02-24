@@ -15,19 +15,25 @@ defineProps({
         <ChevronLeft :size="24" />
       </button>
       <h1>Photo Curation</h1>
-      <div class="spacer"></div>
+      <div class="spacer" />
     </header>
 
     <!-- Content -->
     <div class="content-center">
       <div class="pulse-circle">
         <div class="icon-wrapper">
-          <Sparkles :size="48" color="#3B82F6" fill="#3B82F6" />
+          <Sparkles
+            :size="48"
+            color="#3B82F6"
+            fill="#3B82F6"
+          />
         </div>
       </div>
 
       <AppLogo />
-      <p class="mt-4">Finding duplicates and your best<br>shots to keep your gallery clean.</p>
+      <p class="mt-4">
+        Finding duplicates and your best<br>shots to keep your gallery clean.
+      </p>
     </div>
   </div>
 </template>
