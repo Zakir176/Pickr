@@ -6,9 +6,16 @@ import { Sparkles } from 'lucide-vue-next';
   <div class="logo-container">
     <div class="logo-mark glass-panel">
       <div class="shutter">
-        <div class="blade" v-for="n in 6" :key="n"></div>
+        <div
+          v-for="n in 6"
+          :key="n"
+          class="blade"
+        />
       </div>
-      <Sparkles class="logo-icon" :size="24" />
+      <Sparkles
+        class="logo-icon"
+        :size="24"
+      />
     </div>
     <span class="logo-text">Pickr</span>
   </div>
