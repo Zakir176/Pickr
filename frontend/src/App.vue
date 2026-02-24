@@ -11,7 +11,8 @@ import LibraryView from './components/LibraryView.vue';
 import SettingsView from './components/SettingsView.vue';
 import { Info } from 'lucide-vue-next';
 import { ref, onMounted, computed } from 'vue';
-import axios from 'axios';
+import api from './api';
+import { estimateSpaceSaved } from './utils';
 
 const selectedFiles = ref([]);
 const currentView = ref('upload'); // 'upload' | 'analyzing' | 'results' | 'groupDetail' | 'success'
@@ -22,6 +23,8 @@ const flatResults = computed(() => {
 });
 const fileBlobUrls = ref({});
 const selectedGroup = ref(null);
+const isAnalyzing = ref(false);
+const apiError = ref(null);
 
 // Load results from sessionStorage on mount
 onMounted(() => {
@@ -60,15 +63,20 @@ const analyzePhotos = async () => {
     return;
   }
   
+  isAnalyzing.value = true;
+  apiError.value = null;
   currentView.value = 'analyzing';
+  
   const formData = new FormData();
   selectedFiles.value.forEach(file => {
     formData.append('files', file);
   });
 
   try {
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    const response = await axios.post('/analyze', formData);
+    // Artificial delay for smooth transition
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    const response = await api.post('/analyze', formData);
     
     // The backend returns groups: [{ title: string, items: Array }]
     const groupedResults = (response.data.analysis_results || []).map(group => ({
@@ -79,15 +87,16 @@ const analyzePhotos = async () => {
         isConfirmed: false // Initial state
       }))
     }));
-
     
     analysisResults.value = groupedResults;
     sessionStorage.setItem('analysisResults', JSON.stringify(groupedResults));
     currentView.value = 'results';
   } catch (error) {
     console.error("Analysis failed:", error);
-    alert("Analysis failed.");
+    apiError.value = error.message || "Failed to analyze photos.";
     currentView.value = 'upload';
+  } finally {
+    isAnalyzing.value = false;
   }
 };
 
@@ -173,11 +182,6 @@ const handleNextGroup = () => {
   }
 };
 
-const handleBackToResults = () => {
-  currentView.value = 'results';
-  selectedGroup.value = null;
-};
-
 const handleNavigate = (view) => {
   currentView.value = view;
 };
@@ -189,7 +193,7 @@ const successStats = computed(() => {
   // Mock space saving: assume 3MB per photo
   return {
     deletedCount: deleted,
-    spaceSaved: `${deleted * 3} MB`
+    spaceSaved: estimateSpaceSaved(deleted)
   };
 });
 
@@ -207,12 +211,35 @@ const saveResults = () => {
 
 <template>
   <div class="app-container container">
-    <transition name="fade" mode="out-in">
-      <div :key="currentView" class="view-wrapper">
+    <transition
+      name="fade"
+      mode="out-in"
+    >
+      <div
+        :key="currentView"
+        class="view-wrapper"
+      >
         <!-- Upload View -->
         <template v-if="currentView === 'upload'">
           <TopBar />
           <main class="content-area">
+            <!-- Error Banner -->
+            <div 
+              v-if="apiError" 
+              class="error-banner glass-panel"
+            >
+              <div class="error-content">
+                <Info :size="16" />
+                <span>{{ apiError }}</span>
+              </div>
+              <button 
+                class="close-error" 
+                @click="apiError = null"
+              >
+                &times;
+              </button>
+            </div>
+
             <UploadCard @files-selected="handleFiles" />
             <div class="info-text">
               <Info :size="14" />
@@ -222,7 +249,10 @@ const saveResults = () => {
               <ActionButton @click="analyzePhotos" />
             </div>
           </main>
-          <BottomNav :active-view="currentView" @navigate="handleNavigate" />
+          <BottomNav
+            :active-view="currentView"
+            @navigate="handleNavigate"
+          />
         </template>
 
         <!-- Library View -->
@@ -231,7 +261,10 @@ const saveResults = () => {
           <main class="content-area">
             <LibraryView />
           </main>
-          <BottomNav :active-view="currentView" @navigate="handleNavigate" />
+          <BottomNav
+            :active-view="currentView"
+            @navigate="handleNavigate"
+          />
         </template>
 
         <!-- Settings View -->
@@ -240,7 +273,10 @@ const saveResults = () => {
           <main class="content-area">
             <SettingsView />
           </main>
-          <BottomNav :active-view="currentView" @navigate="handleNavigate" />
+          <BottomNav
+            :active-view="currentView"
+            @navigate="handleNavigate"
+          />
         </template>
 
         <!-- Analyzing View -->
@@ -260,7 +296,6 @@ const saveResults = () => {
             @smart-clean="handleSmartClean"
             @set-best="handleSetBest"
           />
-
         </template>
 
         <!-- Group Detail View -->
@@ -271,7 +306,6 @@ const saveResults = () => {
             @update-status="handleUpdateStatus"
             @set-best="handleSetBest"
           />
-
         </template>
 
         <!-- Success View -->
@@ -330,5 +364,35 @@ const saveResults = () => {
   margin-top: auto;
   margin-bottom: 24px;
   padding: 0 16px;
+}
+.error-banner {
+  margin-top: 16px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 12px;
+  color: #EF4444;
+}
+
+.error-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.close-error {
+  font-size: 20px;
+  color: #EF4444;
+  opacity: 0.6;
+  padding: 4px;
+}
+
+.close-error:hover {
+  opacity: 1;
 }
 </style>
