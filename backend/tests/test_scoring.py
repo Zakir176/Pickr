@@ -7,34 +7,37 @@ import time
 API_URL = "http://localhost:8000/analyze"
 TEMP_DIR = "test_images"
 
+
 def setup():
     if not os.path.exists(TEMP_DIR):
         os.makedirs(TEMP_DIR)
 
+
 def create_image(filename, method):
     img = np.zeros((500, 500, 3), dtype=np.uint8)
-    
+
     if method == "solid_black":
-        pass # Already black
-    
+        pass  # Already black
+
     elif method == "solid_white":
         img.fill(255)
-        
+
     elif method == "solid_gray":
-        img.fill(127) # Ideal exposure
-        
+        img.fill(127)  # Ideal exposure
+
     elif method == "noise_sharp":
         # Random noise is very sharp (high laplacian variance)
         cv2.randn(img, (127, 127, 127), (50, 50, 50))
-        
+
     elif method == "noise_blur":
         # Generate noise then blur it
         cv2.randn(img, (127, 127, 127), (50, 50, 50))
         img = cv2.GaussianBlur(img, (21, 21), 0)
-        
+
     path = os.path.join(TEMP_DIR, filename)
     cv2.imwrite(path, img)
     return path
+
 
 def test_backend():
     print("Generating test images...")
@@ -45,16 +48,16 @@ def test_backend():
         ("sharp.jpg", "noise_sharp", "Expect High Blur Score (Sharp)"),
         ("blurry.jpg", "noise_blur", "Expect Low Blur Score (Blurry)"),
     ]
-    
+
     files_payload = []
     file_handlers = []
-    
+
     try:
         for fname, method, desc in files_to_test:
             path = create_image(fname, method)
-            f = open(path, 'rb')
+            f = open(path, "rb")
             file_handlers.append(f)
-            files_payload.append(('files', (fname, f, 'image/jpeg')))
+            files_payload.append(("files", (fname, f, "image/jpeg")))
             print(f"Created {fname}: {desc}")
 
         print("\nSending request to backend...")
@@ -86,7 +89,8 @@ def test_backend():
         # Cleanup
         for f in file_handlers:
             f.close()
-            
+
+
 if __name__ == "__main__":
     setup()
     # Give server a moment if it just started

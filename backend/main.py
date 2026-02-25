@@ -6,7 +6,7 @@ import io
 from PIL import Image
 from pillow_heif import register_heif_opener
 
-register_heif_opener() # Enable HEIC support in Pillow
+register_heif_opener()  # Enable HEIC support in Pillow
 
 try:
     import backend.analysis as analysis
@@ -26,15 +26,12 @@ KEEP_THRESHOLD = 0.75
 REVIEW_THRESHOLD = 0.50
 
 # --- Scoring Configuration ---
-SCORING_WEIGHTS = {
-    "blur": 0.4,
-    "exposure": 0.3,
-    "contrast": 0.2,
-    "color": 0.1
-}
+SCORING_WEIGHTS = {"blur": 0.4, "exposure": 0.3, "contrast": 0.2, "color": 0.1}
+
 
 def normalize_simple(value, max_val):
     return min(float(value) / max_val, 1.0)
+
 
 def calculate_final_exposure_score(stats):
     mean_val = stats["mean_brightness"]
@@ -44,6 +41,7 @@ def calculate_final_exposure_score(stats):
         dist_score *= 0.5
     return max(dist_score, 0.0)
 
+
 def get_recommendation(final_score: float) -> str:
     if final_score >= KEEP_THRESHOLD:
         return "Keep"
@@ -52,19 +50,20 @@ def get_recommendation(final_score: float) -> str:
     else:
         return "Delete"
 
+
 @app.post("/analyze")
 async def analyze_images(files: List[UploadFile] = File(...)):
     raw_results = []
     for file in files:
         try:
             contents = await file.read()
-            
+
             # --- HEIC & Format Handling ---
             # We use Pillow to handle formats (including HEIC) then convert to OpenCV BGR
             pil_img = Image.open(io.BytesIO(contents))
             if pil_img.mode != "RGB":
                 pil_img = pil_img.convert("RGB")
-            
+
             img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
 
             if img is None:
@@ -80,7 +79,7 @@ async def analyze_images(files: List[UploadFile] = File(...)):
             contrast_raw = analysis.calculate_contrast(gray)
             color_raw = analysis.calculate_colorfulness(img)
             phash = analysis.calculate_phash(img)
-            
+
             # --- 3. Normalize ---
             norm_blur = normalize_simple(blur_raw, MAX_BLUR_THRESHOLD)
             norm_exposure = calculate_final_exposure_score(exposure_stats)
@@ -89,43 +88,49 @@ async def analyze_images(files: List[UploadFile] = File(...)):
 
             # --- 4. Final Score ---
             final_score = (
-                (norm_blur * SCORING_WEIGHTS["blur"]) +
-                (norm_exposure * SCORING_WEIGHTS["exposure"]) +
-                (norm_contrast * SCORING_WEIGHTS["contrast"]) +
-                (norm_color * SCORING_WEIGHTS["color"])
+                (norm_blur * SCORING_WEIGHTS["blur"])
+                + (norm_exposure * SCORING_WEIGHTS["exposure"])
+                + (norm_contrast * SCORING_WEIGHTS["contrast"])
+                + (norm_color * SCORING_WEIGHTS["color"])
             )
 
             # --- 5. Recommendation ---
             recommendation = get_recommendation(final_score)
-            
-            raw_results.append({
-                "filename": file.filename,
-                "phash": phash,
-                "score_components": {
-                    "blur": round(norm_blur, 2),
-                    "exposure": round(norm_exposure, 2),
-                    "contrast": round(norm_contrast, 2),
-                    "color": round(norm_color, 2)
-                },
-                "metrics_raw": {
-                    "blur_var": round(float(blur_raw), 2),
-                    "faces_detected": int(len(faces)) if faces is not None else 0,
-                    "mean_brightness": round(float(exposure_stats["mean_brightness"]), 2),
-                    "contrast_std": round(float(contrast_raw), 2),
-                    "color_metric": round(float(color_raw), 2)
-                },
-                "final_score": round(final_score, 2),
-                "recommendation": recommendation
-            })
+
+            raw_results.append(
+                {
+                    "filename": file.filename,
+                    "phash": phash,
+                    "score_components": {
+                        "blur": round(norm_blur, 2),
+                        "exposure": round(norm_exposure, 2),
+                        "contrast": round(norm_contrast, 2),
+                        "color": round(norm_color, 2),
+                    },
+                    "metrics_raw": {
+                        "blur_var": round(float(blur_raw), 2),
+                        "faces_detected": int(len(faces)) if faces is not None else 0,
+                        "mean_brightness": round(
+                            float(exposure_stats["mean_brightness"]), 2
+                        ),
+                        "contrast_std": round(float(contrast_raw), 2),
+                        "color_metric": round(float(color_raw), 2),
+                    },
+                    "final_score": round(final_score, 2),
+                    "recommendation": recommendation,
+                }
+            )
 
         except Exception as e:
-            raw_results.append({
-                "filename": file.filename,
-                "error": str(e),
-                "phash": "0000000000000000", # Dummy for error cases
-                "final_score": 0.0,
-                "recommendation": "Review"
-            })
+            raw_results.append(
+                {
+                    "filename": file.filename,
+                    "error": str(e),
+                    "phash": "0000000000000000",  # Dummy for error cases
+                    "final_score": 0.0,
+                    "recommendation": "Review",
+                }
+            )
 
     # --- 6. Clustering ---
     grouped_results = analysis.cluster_results(raw_results)
