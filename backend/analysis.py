@@ -1,17 +1,20 @@
 import cv2
 import numpy as np
-import os
 import imagehash
 from PIL import Image
 
 # Get path to Haar cascade file from OpenCV's data
-face_cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+face_cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
 face_cascade = cv2.CascadeClassifier(face_cascade_path)
+
 
 def detect_faces(gray_img):
     """Detects faces in a grayscale image. Returns list of (x, y, w, h)."""
-    faces = face_cascade.detectMultiScale(gray_img, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+    faces = face_cascade.detectMultiScale(
+        gray_img, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30)
+    )
     return faces
+
 
 def calculate_blur(gray_img, faces=None):
     """
@@ -23,18 +26,19 @@ def calculate_blur(gray_img, faces=None):
     if faces is not None and len(faces) > 0:
         # If faces are present, calculate average variance of face regions
         variances = []
-        for (x, y, w, h) in faces:
+        for x, y, w, h in faces:
             # Extract face ROI
-            roi = gray_img[y:y+h, x:x+w]
+            roi = gray_img[y : y + h, x : x + w]
             var = cv2.Laplacian(roi, cv2.CV_64F).var()
             variances.append(var)
-        
+
         # Take the maximum variance (sharpest face) as the score
         # We assume if at least one face is sharp, the photo is usable
         return max(variances), True
     else:
         # Global variance
         return cv2.Laplacian(gray_img, cv2.CV_64F).var(), False
+
 
 def calculate_exposure_stats(gray_img):
     """
@@ -47,29 +51,31 @@ def calculate_exposure_stats(gray_img):
     """
     hist = cv2.calcHist([gray_img], [0], None, [256], [0, 256])
     total_pixels = gray_img.size
-    
+
     # Shadow clipping (< 5)
     shadow_count = np.sum(hist[:5])
     shadow_clip_ratio = shadow_count / total_pixels
-    
+
     # Highlight clipping (> 250)
     highlight_count = np.sum(hist[251:])
     highlight_clip_ratio = highlight_count / total_pixels
-    
+
     # Dynamic Range (using percentiles)
     p1, p99 = np.percentile(gray_img, [1, 99])
     dynamic_range = p99 - p1
-    
+
     return {
         "mean_brightness": np.mean(gray_img),
         "dynamic_range": dynamic_range,
         "shadow_clip_ratio": shadow_clip_ratio,
-        "highlight_clip_ratio": highlight_clip_ratio
+        "highlight_clip_ratio": highlight_clip_ratio,
     }
+
 
 def calculate_contrast(gray_img):
     """Calculates RMS contrast (Standard Deviation of pixel intensities)."""
     return float(np.std(gray_img))
+
 
 def calculate_colorfulness(img_bgr):
     """
@@ -81,14 +87,15 @@ def calculate_colorfulness(img_bgr):
 
     std_rg = np.std(rg)
     mean_rg = np.mean(rg)
-    
+
     std_yb = np.std(yb)
     mean_yb = np.mean(yb)
-    
+
     std_root = np.sqrt(std_rg**2 + std_yb**2)
     mean_root = np.sqrt(mean_rg**2 + mean_yb**2)
-    
+
     return std_root + (0.3 * mean_root)
+
 
 def calculate_phash(img_bgr):
     """Calculates perceptual hash of an image."""
@@ -97,6 +104,7 @@ def calculate_phash(img_bgr):
     pil_img = Image.fromarray(img_rgb)
     return str(imagehash.phash(pil_img))
 
+
 def cluster_results(results, threshold=10):
     """
     Groups analysis results based on perceptual hash similarity.
@@ -104,11 +112,11 @@ def cluster_results(results, threshold=10):
     Returns list of groups [{title, items:[]}]
     """
     clusters = []
-    
+
     for item in results:
         assigned = False
         item_hash = imagehash.hex_to_hash(item["phash"])
-        
+
         for cluster in clusters:
             # Check distance against the first item in the cluster (the representative)
             rep_hash = imagehash.hex_to_hash(cluster[0]["phash"])
@@ -116,29 +124,26 @@ def cluster_results(results, threshold=10):
                 cluster.append(item)
                 assigned = True
                 break
-        
+
         if not assigned:
             clusters.append([item])
-            
+
     # Format for Frontend
     formatted_groups = []
     for i, cluster in enumerate(clusters):
         # Sort cluster by final_score descending to pick the best shot
         cluster.sort(key=lambda x: x["final_score"], reverse=True)
-        
+
         # Mark the first one as best
         for j, item in enumerate(cluster):
-            item["isBest"] = (j == 0)
-            
+            item["isBest"] = j == 0
+
         title = "Group " + str(i + 1)
         if len(cluster) == 1:
             title = "Unique Photo"
         else:
             title = f"Similar Set ({len(cluster)} items)"
-            
-        formatted_groups.append({
-            "title": title,
-            "items": cluster
-        })
-        
+
+        formatted_groups.append({"title": title, "items": cluster})
+
     return formatted_groups
