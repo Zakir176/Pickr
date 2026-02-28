@@ -20,7 +20,7 @@ def calculate_blur(gray_img, faces=None):
     """
     Calculates blur score.
     If faces are detected, focuses analysis on the face regions.
-    Otherwise, uses global Laplacian variance.
+    Otherwise, uses the central 50% ROI to avoid background dominance.
     Returns: (raw_score, is_focused_on_face)
     """
     if faces is not None and len(faces) > 0:
@@ -29,15 +29,27 @@ def calculate_blur(gray_img, faces=None):
         for x, y, w, h in faces:
             # Extract face ROI
             roi = gray_img[y : y + h, x : x + w]
+            # Laplacian variance is a standard measure for focus
             var = cv2.Laplacian(roi, cv2.CV_64F).var()
             variances.append(var)
 
         # Take the maximum variance (sharpest face) as the score
-        # We assume if at least one face is sharp, the photo is usable
         return max(variances), True
     else:
-        # Global variance
-        return cv2.Laplacian(gray_img, cv2.CV_64F).var(), False
+        # No faces: analyze the central region where subjects usually are
+        h, w = gray_img.shape
+        # Center 50% ROI
+        y1, y2 = int(h * 0.25), int(h * 0.75)
+        x1, x2 = int(w * 0.25), int(w * 0.75)
+        roi = gray_img[y1:y2, x1:x2]
+        
+        # We take the global variance but weight it by the center ROI
+        global_var = cv2.Laplacian(gray_img, cv2.CV_64F).var()
+        roi_var = cv2.Laplacian(roi, cv2.CV_64F).var()
+        
+        # Combine global and ROI variance (70% weight on ROI)
+        combined_var = (0.7 * roi_var) + (0.3 * global_var)
+        return combined_var, False
 
 
 def calculate_exposure_stats(gray_img):

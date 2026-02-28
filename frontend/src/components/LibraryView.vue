@@ -1,20 +1,44 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { Clock, HardDrive, Images, ChevronRight } from 'lucide-vue-next';
-import { formatSize } from '../utils';
+import { formatSize, formatDate } from '../utils';
 
-// Mock data for history
-const historyItems = ref([
-  { id: 1, date: 'Feb 15, 2024', count: 124, saved: '372 MB', type: 'Camera Roll' },
-  { id: 2, date: 'Feb 10, 2024', count: 56, saved: '168 MB', type: 'WhatsApp' },
-  { id: 3, date: 'Feb 02, 2024', count: 210, saved: '630 MB', type: 'Camera Roll' },
-]);
+const historyItems = ref([]);
 
-const stats = ref({
-  totalSaved: formatSize(1240), // 1.2 GB
-  photosProcessed: 1450,
-  cleanUpRate: '42%'
+const stats = computed(() => {
+  const totalS = historyItems.value.reduce((acc, item) => {
+    // Extract numeric MB from string like "372 MB"
+    const mb = parseFloat(item.saved) || 0;
+    return acc + mb;
+  }, 0);
+  
+  const totalP = historyItems.value.reduce((acc, item) => acc + (item.count || 0), 0);
+  const totalD = historyItems.value.reduce((acc, item) => acc + (item.deleted || 0), 0);
+  
+  return {
+    totalSaved: formatSize(totalS),
+    photosProcessed: totalP,
+    cleanUpRate: totalP > 0 ? `${Math.round((totalD / totalP) * 100)}%` : '0%'
+  };
 });
+
+onMounted(() => {
+  const saved = localStorage.getItem('pickr_history');
+  if (saved) {
+    try {
+      historyItems.value = JSON.parse(saved);
+    } catch (e) {
+      console.error("Failed to load history:", e);
+    }
+  }
+});
+
+const clearHistory = () => {
+  if (confirm("Clear all curation history?")) {
+    historyItems.value = [];
+    localStorage.removeItem('pickr_history');
+  }
+};
 </script>
 
 <template>
@@ -48,12 +72,19 @@ const stats = ref({
     <section class="history-section">
       <div class="section-header">
         <h3>Curation History</h3>
-        <button class="text-button">
+        <button 
+          v-if="historyItems.length > 0"
+          class="text-button"
+          @click="clearHistory"
+        >
           Clear All
         </button>
       </div>
       
-      <div class="history-list">
+      <div 
+        v-if="historyItems.length > 0"
+        class="history-list"
+      >
         <div
           v-for="item in historyItems"
           :key="item.id"
@@ -63,7 +94,7 @@ const stats = ref({
             <Clock :size="18" />
           </div>
           <div class="history-details">
-            <span class="date">{{ item.date }}</span>
+            <span class="date">{{ formatDate(item.date) }}</span>
             <span class="meta">{{ item.count }} photos • {{ item.type }}</span>
           </div>
           <div class="history-savings">
@@ -71,6 +102,13 @@ const stats = ref({
             <ChevronRight :size="16" />
           </div>
         </div>
+      </div>
+      <div 
+        v-else 
+        class="empty-state glass-panel"
+      >
+        <Clock :size="32" class="opacity-50" />
+        <p>No history yet. Start curating!</p>
       </div>
     </section>
 

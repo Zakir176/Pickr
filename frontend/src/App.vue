@@ -150,8 +150,37 @@ const analyzePhotos = async () => {
 
 // --- Phase 1 Handlers ---
 
+const undoStack = ref([]);
+
+const saveResults = () => {
+  if (saveTimeout) clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => {
+    if (analysisResults.value) {
+      sessionStorage.setItem('analysisResults', JSON.stringify(analysisResults.value));
+    }
+  }, 1000);
+};
+
+const pushToUndoStack = () => {
+  if (analysisResults.value) {
+    // Keep stack size reasonable
+    if (undoStack.value.length >= 10) {
+      undoStack.value.shift();
+    }
+    undoStack.value.push(JSON.parse(JSON.stringify(analysisResults.value)));
+  }
+};
+
+const handleUndo = () => {
+  if (undoStack.value.length > 0) {
+    analysisResults.value = undoStack.value.pop();
+    saveResults();
+  }
+};
+
 const handleUpdateStatus = (item, status) => {
   if (!analysisResults.value) return;
+  pushToUndoStack();
   for (const group of analysisResults.value) {
     const target = group.items.find(r => r.filename === item.filename);
     if (target) {
@@ -163,10 +192,9 @@ const handleUpdateStatus = (item, status) => {
   saveResults();
 };
 
-
-
 const handleSetBest = (item) => {
   if (!analysisResults.value) return;
+  pushToUndoStack();
   for (const group of analysisResults.value) {
     const hasItem = group.items.some(r => r.filename === item.filename);
     if (hasItem) {
@@ -180,13 +208,9 @@ const handleSetBest = (item) => {
   saveResults();
 };
 
-
-const confirmDeletions = () => {
-  currentView.value = 'success';
-};
-
 const handleSmartClean = () => {
   if (!analysisResults.value) return;
+  pushToUndoStack();
   
   analysisResults.value = analysisResults.value.map(group => {
     if (group.items.length <= 1) return group;
@@ -205,6 +229,24 @@ const handleSmartClean = () => {
   saveResults();
 };
 
+const confirmDeletions = () => {
+  // Save to history before showing success
+  const stats = successStats.value;
+  const historyEntry = {
+    id: Date.now(),
+    date: new Date().toISOString(),
+    count: flatResults.value.length,
+    deleted: stats.deletedCount,
+    saved: stats.spaceSaved,
+    type: 'Manual Curation'
+  };
+
+  const history = JSON.parse(localStorage.getItem('pickr_history') || '[]');
+  history.unshift(historyEntry);
+  localStorage.setItem('pickr_history', JSON.stringify(history.slice(0, 50))); // Keep last 50
+
+  currentView.value = 'success';
+};
 
 const handleFinish = () => {
   handleBackToUpload();
@@ -238,23 +280,13 @@ const successStats = computed(() => {
   const results = flatResults.value || [];
   if (results.length === 0) return { deletedCount: 0, spaceSaved: '0 MB' };
   const deleted = results.filter(r => r.recommendation === 'Delete').length;
-  // Mock space saving: assume 3MB per photo
   return {
     deletedCount: deleted,
     spaceSaved: estimateSpaceSaved(deleted)
   };
 });
 
-// Debounced save to sessionStorage
 let saveTimeout = null;
-const saveResults = () => {
-  if (saveTimeout) clearTimeout(saveTimeout);
-  saveTimeout = setTimeout(() => {
-    if (analysisResults.value) {
-      sessionStorage.setItem('analysisResults', JSON.stringify(analysisResults.value));
-    }
-  }, 1000);
-};
 </script>
 
 <template>
@@ -333,16 +365,18 @@ const saveResults = () => {
         </template>
 
         <!-- Results View -->
-        <template v-else-if="currentView === 'results'">
+        <template v-if="currentView === 'results'">
           <ResultsView 
             :groups="analysisResults"
             :flat-results="flatResults"
+            :can-undo="undoStack.length > 0"
             @back="handleBackToUpload"
             @confirm="confirmDeletions"
             @view-group="handleViewGroup"
             @update-status="handleUpdateStatus"
             @smart-clean="handleSmartClean"
             @set-best="handleSetBest"
+            @undo="handleUndo"
           />
         </template>
 

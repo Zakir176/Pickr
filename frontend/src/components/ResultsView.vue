@@ -1,5 +1,36 @@
 <script setup>
-import { ChevronLeft, Wand2, ChevronDown, Download, Check, X } from 'lucide-vue-next';
+import { ChevronLeft, Wand2, ChevronDown, Download, Check, X, RotateCcw, FolderDown } from 'lucide-vue-next';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
+
+const isExporting = ref(false);
+
+const downloadKeepers = async () => {
+  const keepers = props.flatResults.filter(r => r.recommendation === 'Keep');
+  if (keepers.length === 0) return;
+  
+  isExporting.value = true;
+  const zip = new JSZip();
+  const folder = zip.folder("Pickr-Keepers");
+
+  try {
+    for (const item of keepers) {
+      if (item.blobUrl) {
+        const response = await fetch(item.blobUrl);
+        const blob = await response.blob();
+        folder.file(item.filename, blob);
+      }
+    }
+
+    const content = await zip.generateAsync({ type: "blob" });
+    saveAs(content, `Pickr-Keepers-${new Date().getTime()}.zip`);
+  } catch (err) {
+    console.error("Export failed:", err);
+    alert("Export failed. Please try again.");
+  } finally {
+    isExporting.value = false;
+  }
+};
 import StatusBadge from './StatusBadge.vue';
 import BestShotBadge from './BestShotBadge.vue';
 import { computed, ref, reactive } from 'vue';
@@ -13,10 +44,14 @@ const props = defineProps({
   flatResults: {
     type: Array,
     default: () => []
+  },
+  canUndo: {
+    type: Boolean,
+    default: false
   }
 });
 
-const emit = defineEmits(['back', 'confirm', 'view-group', 'update-status', 'smart-clean', 'set-best']);
+const emit = defineEmits(['back', 'confirm', 'view-group', 'update-status', 'smart-clean', 'set-best', 'undo']);
 
 // Local state for collapsed groups
 const collapsedGroups = ref({});
@@ -117,15 +152,25 @@ const handleTouchEnd = (e, item) => {
         <ChevronLeft :size="24" />
       </button>
       <h1>Curation Results</h1>
-      <button
-        class="smart-btn"
-        aria-label="Smart Clean Bulk Action"
-        title="Smart Clean"
-        @click="$emit('smart-clean')"
-      >
-        <Wand2 :size="16" />
-        <span>Smart Clean</span>
-      </button>
+      <div class="header-actions">
+        <button
+          v-if="canUndo"
+          class="undo-btn"
+          aria-label="Undo last action"
+          @click="$emit('undo')"
+        >
+          <RotateCcw :size="16" />
+        </button>
+        <button
+          class="smart-btn"
+          aria-label="Smart Clean Bulk Action"
+          title="Smart Clean"
+          @click="$emit('smart-clean')"
+        >
+          <Wand2 :size="16" />
+          <span>Smart Clean</span>
+        </button>
+      </div>
     </header>
 
     <div class="scroll-content">
@@ -304,6 +349,16 @@ const handleTouchEnd = (e, item) => {
         <span>Confirm Selection ({{ confirmedCount }})</span>
       </button>
 
+      <button
+        v-if="flatResults.some(r => r.recommendation === 'Keep')"
+        class="export-btn"
+        :disabled="isExporting"
+        @click="downloadKeepers"
+      >
+        <FolderDown v-if="!isExporting" :size="20" />
+        <RotateCcw v-else class="animate-spin" :size="20" />
+        <span>{{ isExporting ? 'Preparing ZIP...' : 'Download Keepers' }}</span>
+      </button>
 
       <p class="disclaimer">
         All deleted photos will be moved to Recently Deleted in your Photos app.
@@ -334,6 +389,33 @@ h1 {
   font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.5px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.undo-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--primary-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.undo-btn:hover {
+  background: rgba(59, 130, 246, 0.2);
+  transform: rotate(-30deg);
+}
+
+.undo-btn:active {
+  transform: scale(0.9) rotate(-60deg);
 }
 
 .smart-btn {
@@ -535,6 +617,36 @@ h1 {
   max-width: 400px;
   margin: 0 auto;
   box-shadow: 0 8px 20px rgba(59, 130, 246, 0.25);
+}
+
+.export-btn {
+  width: 100%;
+  padding: 14px;
+  background: var(--white);
+  border: 1px solid var(--primary-blue);
+  color: var(--primary-blue);
+  border-radius: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 12px;
+  transition: all 0.3s ease;
+}
+
+.export-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .disclaimer {
