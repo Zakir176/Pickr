@@ -1,6 +1,5 @@
 <script setup>
 import { CheckCircle2, Share2, Trash2 } from 'lucide-vue-next';
-// No computed needed
 
 defineProps({
   stats: {

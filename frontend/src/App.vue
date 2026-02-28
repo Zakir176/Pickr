@@ -10,8 +10,8 @@ import SuccessView from './components/SuccessView.vue';
 import LibraryView from './components/LibraryView.vue';
 import SettingsView from './components/SettingsView.vue';
 import { Info } from 'lucide-vue-next';
-import { ref, onMounted, computed } from 'vue';
 import api from './api';
+import { ref, onMounted, computed, watch } from 'vue';
 import { estimateSpaceSaved } from './utils';
 
 const selectedFiles = ref([]);
@@ -26,7 +26,25 @@ const selectedGroup = ref(null);
 const isAnalyzing = ref(false);
 const apiError = ref(null);
 
-// Load results from sessionStorage on mount
+// Settings and Theme
+const settings = ref({
+  theme: 'system'
+});
+
+const applyTheme = (theme) => {
+  let activeTheme = theme;
+  if (theme === 'system') {
+    activeTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  
+  if (activeTheme === 'dark') {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
+};
+
+// Load results and settings from storage on mount
 onMounted(() => {
   const storedResults = sessionStorage.getItem('analysisResults');
   if (storedResults) {
@@ -37,6 +55,36 @@ onMounted(() => {
       console.error("Failed to parse stored analysis results:", e);
       sessionStorage.removeItem('analysisResults');
     }
+  }
+
+  const savedSettings = localStorage.getItem('pickr_settings');
+  if (savedSettings) {
+    try {
+      Object.assign(settings.value, JSON.parse(savedSettings));
+    } catch (e) {
+      console.error("Failed to load settings:", e);
+    }
+  }
+  
+  applyTheme(settings.value.theme);
+
+  // Listen for system theme changes
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    if (settings.value.theme === 'system') {
+      applyTheme('system');
+    }
+  });
+});
+
+// Watch for theme changes and apply
+watch(() => settings.value.theme, (newTheme) => {
+  applyTheme(newTheme);
+});
+
+// Watch for global settings changes from other components (if they use the same storage)
+window.addEventListener('storage', (e) => {
+  if (e.key === 'pickr_settings' && e.newValue) {
+    settings.value = JSON.parse(e.newValue);
   }
 });
 
