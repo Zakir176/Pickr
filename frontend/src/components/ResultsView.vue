@@ -141,142 +141,155 @@ const handleTouchEnd = (e, item) => {
         </div>
       </div>
 
-      <!-- Groups -->
-      <div
-        v-for="(group, idx) in groups"
-        :key="idx"
-        class="group-section"
+      <!-- Virtualized Groups -->
+      <DynamicScroller
+        :items="groups"
+        :min-item-size="150"
+        key-field="title"
+        class="groups-scroller"
       >
-        <div
-          class="group-header clickable"
-          @click="toggleGroup(group.title)"
-        >
-          <h3>{{ group.title }}</h3>
-          <div class="group-header-right">
-            <span
-              v-if="group.items.length > 1"
-              class="sub-text"
-            >Best match selected</span>
-            <ChevronDown
-              :class="{ 'rotate-180': collapsedGroups[group.title] }"
-              :size="20"
-              class="chevron-icon"
-            />
-          </div>
-        </div>
-
-        <transition name="fade">
-          <div
-            v-if="!collapsedGroups[group.title]"
-            class="grid-responsive photo-grid-spacing"
+        <template v-slot="{ item: group, index: idx, active }">
+          <DynamicScrollerItem
+            :item="group"
+            :active="active"
+            :size-dependencies="[group.items.length, collapsedGroups[group.title]]"
+            :data-index="idx"
+            class="group-item-wrapper"
           >
-            <div 
-              v-for="(item, i) in group.items"
-              :key="i" 
-              class="photo-card" 
-              @click="$emit('view-group', group)"
-            >
-              <div 
-                class="photo-inner"
-                :style="{ transform: `translateX(${swipeOffsets[item.filename] || 0}px)` }"
-                @touchstart="handleTouchStart($event, item.filename)"
-                @touchmove="handleTouchMove($event, item.filename)"
-                @touchend="handleTouchEnd($event, item)"
-              >
-                <img 
-                  v-if="item.blobUrl" 
-                  :src="item.blobUrl" 
-                  class="photo-img" 
-                  alt="Analyzed photo" 
-                  loading="lazy"
-                >
-                <div
-                  v-else
-                  class="img-placeholder"
-                >
-                  <span class="filename">{{ item.filename }}</span>
-                </div>
-                
-                <!-- Download Button -->
-                <button
-                  v-if="item.blobUrl"
-                  class="download-btn"
-                  @click.stop="downloadPhoto(item.blobUrl, item.filename)"
-                >
-                  <Download
-                    :size="16"
-                    color="white"
-                  />
-                </button>
-
-                <div class="badge-overlay">
-                  <StatusBadge
-                    :status="item.error ? 'Error' : item.recommendation"
-                    :error-message="item.error"
-                  />
-                  <BestShotBadge 
-                    v-if="item.isBest" 
-                    :is-best="true" 
-                    style="margin-top: 8px;" 
-                    @toggle="handleSetBest(item)"
-                  />
-                </div>
-
-                <!-- Manual Toggle Controls -->
-                <div
-                  class="control-overlay"
-                  @click.stop
-                >
-                  <button 
-                    class="ctrl-btn keep" 
-                    :class="{ active: item.recommendation === 'Keep' }"
-                    aria-label="Keep Photo"
-                    @click="handleSetStatus(item, 'Keep')"
-                  >
-                    <Check :size="14" />
-                  </button>
-                  <button 
-                    class="ctrl-btn delete" 
-                    :class="{ active: item.recommendation === 'Delete' }"
-                    aria-label="Delete Photo"
-                    @click="handleSetStatus(item, 'Delete')"
-                  >
-                    <X :size="14" />
-                  </button>
-                </div>
-                
-                <!-- Quality Label -->
-                <div class="quality-overlay">
-                  <StatusBadge
-                    :status="getQualityLabel(item.final_score)"
-                    type="label"
-                  />
-                </div>
-              </div>
-              
-              <!-- Swipe Background Indicators -->
+            <div class="group-section">
               <div
-                class="swipe-bg swipe-keep"
-                :style="{ opacity: (swipeOffsets[item.filename] || 0) / 100 }"
+                class="group-header clickable"
+                @click="toggleGroup(group.title)"
               >
-                <Check
-                  :size="32"
-                  color="white"
-                />
+                <h3>{{ group.title }}</h3>
+                <div class="group-header-right">
+                  <span
+                    v-if="group.items.length > 1"
+                    class="sub-text"
+                  >Best match selected</span>
+                  <ChevronDown
+                    :class="{ 'rotate-180': collapsedGroups[group.title] }"
+                    :size="20"
+                    class="chevron-icon"
+                  />
+                </div>
               </div>
-              <div
-                class="swipe-bg swipe-delete"
-                :style="{ opacity: -(swipeOffsets[item.filename] || 0) / 100 }"
-              >
-                <X
-                  :size="32"
-                  color="white"
-                />
-              </div>
+
+              <transition name="fade">
+                <div
+                  v-if="!collapsedGroups[group.title]"
+                  class="grid-responsive photo-grid-spacing"
+                >
+                  <div 
+                    v-for="(item, i) in group.items"
+                    :key="i" 
+                    class="photo-card" 
+                    @click="$emit('view-group', group)"
+                  >
+                    <div 
+                      class="photo-inner"
+                      :style="{ transform: `translateX(${swipeOffsets[item.filename] || 0}px)` }"
+                      @touchstart="handleTouchStart($event, item.filename)"
+                      @touchmove="handleTouchMove($event, item.filename)"
+                      @touchend="handleTouchEnd($event, item)"
+                    >
+                      <img 
+                        v-if="item.blobUrl" 
+                        :src="item.blobUrl" 
+                        class="photo-img" 
+                        alt="Analyzed photo" 
+                        loading="lazy"
+                      >
+                      <div
+                        v-else
+                        class="img-placeholder"
+                      >
+                        <span class="filename">{{ item.filename }}</span>
+                      </div>
+                      
+                      <!-- Download Button -->
+                      <button
+                        v-if="item.blobUrl"
+                        class="download-btn"
+                        @click.stop="downloadPhoto(item.blobUrl, item.filename)"
+                      >
+                        <Download
+                          :size="16"
+                          color="white"
+                        />
+                      </button>
+
+                      <div class="badge-overlay">
+                        <StatusBadge
+                          :status="item.error ? 'Error' : item.recommendation"
+                          :error-message="item.error"
+                        />
+                        <BestShotBadge 
+                          v-if="item.isBest" 
+                          :is-best="true" 
+                          style="margin-top: 8px;" 
+                          @toggle="handleSetBest(item)"
+                        />
+                      </div>
+
+                      <!-- Manual Toggle Controls -->
+                      <div
+                        class="control-overlay"
+                        @click.stop
+                      >
+                        <button 
+                          class="ctrl-btn keep" 
+                          :class="{ active: item.recommendation === 'Keep' }"
+                          aria-label="Keep Photo"
+                          @click="handleSetStatus(item, 'Keep')"
+                        >
+                          <Check :size="14" />
+                        </button>
+                        <button 
+                          class="ctrl-btn delete" 
+                          :class="{ active: item.recommendation === 'Delete' }"
+                          aria-label="Delete Photo"
+                          @click="handleSetStatus(item, 'Delete')"
+                        >
+                          <X :size="14" />
+                        </button>
+                      </div>
+                      
+                      <!-- Quality Label -->
+                      <div class="quality-overlay">
+                        <StatusBadge
+                          :status="getQualityLabel(item.final_score)"
+                          type="label"
+                        />
+                      </div>
+                    </div>
+                    
+                    <!-- Swipe Background Indicators -->
+                    <div
+                      class="swipe-bg swipe-keep"
+                      :style="{ opacity: (swipeOffsets[item.filename] || 0) / 100 }"
+                    >
+                      <Check
+                        :size="32"
+                        color="white"
+                      />
+                    </div>
+                    <div
+                      class="swipe-bg swipe-delete"
+                      :style="{ opacity: -(swipeOffsets[item.filename] || 0) / 100 }"
+                    >
+                      <X
+                        :size="32"
+                        color="white"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </transition>
             </div>
-          </div>
-        </transition>
-      </div>
+          </DynamicScrollerItem>
+        </template>
+      </DynamicScroller>
       
       <div class="spacer-bottom" />
     </div>
@@ -338,9 +351,19 @@ h1 {
 
 .scroll-content {
   flex: 1;
-  overflow-y: scroll; /* Use generic scroll for better mobile feel */
-  -webkit-overflow-scrolling: touch;
   padding: 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+}
+
+.groups-scroller {
+  height: 100%;
+}
+
+.group-item-wrapper {
+  contain: size layout style;
 }
 
 /* Stats */
