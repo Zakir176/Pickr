@@ -1,5 +1,5 @@
 <script setup>
-import { ChevronLeft, Check, X } from 'lucide-vue-next';
+import { ChevronLeft, Check, X, Heart } from 'lucide-vue-next';
 import { ref, reactive } from 'vue';
 import StatusBadge from './StatusBadge.vue';
 import BestShotBadge from './BestShotBadge.vue';
@@ -11,7 +11,7 @@ defineProps({
   }
 });
 
-const emit = defineEmits(['back', 'update-status', 'set-best']);
+const emit = defineEmits(['back', 'update-status', 'set-best', 'toggle-favorite']);
 
 const handleSetStatus = (item, status) => {
   emit('update-status', item, status);
@@ -138,6 +138,14 @@ const handleTouchEnd = (e, item) => {
             </div>
             
             <div class="actions">
+              <button 
+                class="action-btn favorite" 
+                :class="{ active: item.isFavorite }"
+                aria-label="Favorite Photo"
+                @click="$emit('toggle-favorite', item)"
+              >
+                <Heart :size="20" :fill="item.isFavorite ? '#EF4444' : 'none'" :color="item.isFavorite ? '#EF4444' : 'currentColor'" />
+              </button>
               <button 
                 class="action-btn keep" 
                 :class="{ active: item.recommendation === 'Keep' }"
