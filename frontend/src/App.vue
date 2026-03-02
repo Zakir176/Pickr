@@ -12,7 +12,7 @@ import SettingsView from './components/SettingsView.vue';
 import { Info } from 'lucide-vue-next';
 import api from './api';
 import { ref, onMounted, computed, watch } from 'vue';
-import { estimateSpaceSaved } from './utils';
+import { estimateSpaceSaved, resizeImage } from './utils';
 
 const selectedFiles = ref([]);
 const currentView = ref('upload'); // 'upload' | 'analyzing' | 'results' | 'groupDetail' | 'success'
@@ -24,6 +24,7 @@ const flatResults = computed(() => {
 const fileBlobUrls = ref({});
 const selectedGroup = ref(null);
 const isAnalyzing = ref(false);
+const analysisStep = ref(''); // 'resizing' | 'uploading' | 'analyzing'
 const apiError = ref(null);
 
 // Settings and Theme
@@ -114,25 +115,38 @@ const analyzePhotos = async () => {
   isAnalyzing.value = true;
   apiError.value = null;
   currentView.value = 'analyzing';
+  analysisStep.value = 'resizing';
   
   const formData = new FormData();
-  selectedFiles.value.forEach(file => {
-    formData.append('files', file);
-  });
+  for (const file of selectedFiles.value) {
+    try {
+      // Resize to max 1600px to save bandwidth
+      const resizedBlob = await resizeImage(file, 1600);
+      formData.append('files', resizedBlob, file.name);
+    } catch (e) {
+      console.warn(`Failed to resize ${file.name}, uploading original:`, e);
+      formData.append('files', file);
+    }
+  }
+
+  analysisStep.value = 'uploading';
 
   try {
     // Artificial delay for smooth transition
-    await new Promise(resolve => setTimeout(resolve, 800));
+    await new Promise(resolve => setTimeout(resolve, 400));
     
+    analysisStep.value = 'analyzing';
     const response = await api.post('/analyze', formData);
     
     // The backend returns groups: [{ title: string, items: Array }]
+    const savedKeepers = JSON.parse(localStorage.getItem('pickr_keepers') || '[]');
     const groupedResults = (response.data.analysis_results || []).map(group => ({
       ...group,
       items: group.items.map(item => ({
         ...item,
         blobUrl: fileBlobUrls.value[item.filename],
-        isConfirmed: false // Initial state
+        isConfirmed: false, // Initial state
+        isFavorite: savedKeepers.some(k => k.filename === item.filename)
       }))
     }));
     
@@ -176,6 +190,38 @@ const handleUndo = () => {
     analysisResults.value = undoStack.value.pop();
     saveResults();
   }
+};
+
+const handleToggleFavorite = (item) => {
+  if (!analysisResults.value) return;
+  pushToUndoStack();
+  
+  for (const group of analysisResults.value) {
+    const target = group.items.find(r => r.filename === item.filename);
+    if (target) {
+      target.isFavorite = !target.isFavorite;
+      
+      // Update keepers list in localStorage (for persistent stats/history)
+      const keepers = JSON.parse(localStorage.getItem('pickr_keepers') || '[]');
+      if (target.isFavorite) {
+        // Avoid duplicates
+        if (!keepers.some(k => k.filename === target.filename)) {
+          keepers.unshift({
+            filename: target.filename,
+            score: target.final_score,
+            date: new Date().toISOString(),
+            phash: target.phash
+          });
+        }
+      } else {
+        const index = keepers.findIndex(k => k.filename === target.filename);
+        if (index !== -1) keepers.splice(index, 1);
+      }
+      localStorage.setItem('pickr_keepers', JSON.stringify(keepers.slice(0, 100)));
+      break;
+    }
+  }
+  saveResults();
 };
 
 const handleUpdateStatus = (item, status) => {
@@ -361,7 +407,7 @@ let saveTimeout = null;
 
         <!-- Analyzing View -->
         <template v-else-if="currentView === 'analyzing'">
-          <AnalyzingView />
+          <AnalyzingView :step="analysisStep" />
         </template>
 
         <!-- Results View -->
@@ -377,6 +423,7 @@ let saveTimeout = null;
             @smart-clean="handleSmartClean"
             @set-best="handleSetBest"
             @undo="handleUndo"
+            @toggle-favorite="handleToggleFavorite"
           />
         </template>
 
@@ -387,6 +434,7 @@ let saveTimeout = null;
             @back="handleNextGroup"
             @update-status="handleUpdateStatus"
             @set-best="handleSetBest"
+            @toggle-favorite="handleToggleFavorite"
           />
         </template>
 
