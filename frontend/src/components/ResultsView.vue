@@ -1,5 +1,5 @@
 <script setup>
-import { ChevronLeft, Wand2, ChevronDown, Download, Check, X, RotateCcw, FolderDown } from 'lucide-vue-next';
+import { ChevronLeft, Wand2, ChevronDown, Download, Check, X, RotateCcw, FolderDown, Heart } from 'lucide-vue-next';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 
@@ -51,7 +51,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['back', 'confirm', 'view-group', 'update-status', 'smart-clean', 'set-best', 'undo']);
+const emit = defineEmits(['back', 'confirm', 'view-group', 'update-status', 'smart-clean', 'set-best', 'undo', 'toggle-favorite']);
 
 // Local state for collapsed groups
 const collapsedGroups = ref({});
@@ -277,28 +277,35 @@ const handleTouchEnd = (e, item) => {
                         />
                       </div>
 
-                      <!-- Manual Toggle Controls -->
                       <div
-                        class="control-overlay"
-                        @click.stop
-                      >
-                        <button 
-                          class="ctrl-btn keep" 
-                          :class="{ active: item.recommendation === 'Keep' }"
-                          aria-label="Keep Photo"
-                          @click="handleSetStatus(item, 'Keep')"
-                        >
-                          <Check :size="14" />
-                        </button>
-                        <button 
-                          class="ctrl-btn delete" 
-                          :class="{ active: item.recommendation === 'Delete' }"
-                          aria-label="Delete Photo"
-                          @click="handleSetStatus(item, 'Delete')"
-                        >
-                          <X :size="14" />
-                        </button>
-                      </div>
+                    class="control-overlay"
+                    @click.stop
+                  >
+                    <button 
+                      class="ctrl-btn favorite" 
+                      :class="{ active: item.isFavorite }"
+                      aria-label="Favorite Photo"
+                      @click="$emit('toggle-favorite', item)"
+                    >
+                      <Heart :size="14" :fill="item.isFavorite ? '#EF4444' : 'none'" :color="item.isFavorite ? '#EF4444' : 'currentColor'" />
+                    </button>
+                    <button 
+                      class="ctrl-btn keep" 
+                      :class="{ active: item.recommendation === 'Keep' }"
+                      aria-label="Keep Photo"
+                      @click="handleSetStatus(item, 'Keep')"
+                    >
+                      <Check :size="14" />
+                    </button>
+                    <button 
+                      class="ctrl-btn delete" 
+                      :class="{ active: item.recommendation === 'Delete' }"
+                      aria-label="Delete Photo"
+                      @click="handleSetStatus(item, 'Delete')"
+                    >
+                      <X :size="14" />
+                    </button>
+                  </div>
                       
                       <!-- Quality Label -->
                       <div class="quality-overlay">

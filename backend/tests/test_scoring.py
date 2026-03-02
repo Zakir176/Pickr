@@ -68,14 +68,17 @@ def test_backend():
                 results = response.json()["analysis_results"]
                 print("\n--- Analysis Results ---")
                 log_file.write("--- Analysis Results ---\n")
-                for res in results:
-                    s = f"\nFile: {res['filename']}\n"
-                    s += f"  Final Score: {res.get('final_score')}\n"
-                    s += f"  Recommendation: {res.get('recommendation')}\n"
-                    s += f"  Blur Raw: {res.get('blur_score_raw')} (Norm: {res.get('normalized_blur_score')})\n"
-                    s += f"  Exposure Raw: {res.get('exposure_score_raw')} (Norm: {res.get('normalized_exposure_score')})\n"
-                    print(s)
-                    log_file.write(s)
+                for group in results:
+                    for res in group['items']:
+                        s = f"\nFile: {res['filename']}\n"
+                        s += f"  Final Score: {res.get('final_score')}\n"
+                        s += f"  Recommendation: {res.get('recommendation')}\n"
+                        s += f"  Blur Score: {res['score_components'].get('blur')}\n"
+                        s += f"  Exposure Score: {res['score_components'].get('exposure')}\n"
+                        s += f"  Contrast Score: {res['score_components'].get('contrast')}\n"
+                        s += f"  Color Score: {res['score_components'].get('color')}\n"
+                        print(s)
+                        log_file.write(s)
             else:
                 print(f"Error: Server returned {response.status_code}")
                 # log_file.write(f"Error: Server returned {response.status_code}")

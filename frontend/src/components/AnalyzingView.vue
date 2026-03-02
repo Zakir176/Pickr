@@ -1,9 +1,12 @@
 <script setup>
-import { ChevronLeft, Sparkles } from 'lucide-vue-next';
+import { ChevronLeft, Sparkles, Loader2, Upload, Scissors } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
 defineProps({
-  // No props needed yet
+  step: {
+    type: String,
+    default: 'analyzing'
+  }
 });
 </script>
 
@@ -23,17 +26,37 @@ defineProps({
       <div class="pulse-circle">
         <div class="icon-wrapper">
           <Sparkles
+            v-if="step === 'analyzing'"
             :size="48"
             color="#3B82F6"
             fill="#3B82F6"
+          />
+          <Upload 
+            v-else-if="step === 'uploading'"
+            :size="48"
+            color="#3B82F6"
+          />
+          <Scissors
+            v-else-if="step === 'resizing'"
+            :size="48"
+            color="#3B82F6"
           />
         </div>
       </div>
 
       <AppLogo />
-      <p class="mt-4">
-        Finding duplicates and your best<br>shots to keep your gallery clean.
-      </p>
+      
+      <div class="step-info mt-4">
+        <div class="step-label">
+          <Loader2 :size="16" class="animate-spin" />
+          <span v-if="step === 'resizing'">Optimizing images...</span>
+          <span v-else-if="step === 'uploading'">Sending to server...</span>
+          <span v-else>Analyzing quality...</span>
+        </div>
+        <p class="sub-text">
+          Finding duplicates and your best<br>shots to keep your gallery clean.
+        </p>
+      </div>
     </div>
   </div>
 </template>
@@ -100,38 +123,56 @@ h1 {
 }
 
 .icon-wrapper {
-  width: 100px;
-  height: 100px;
-  background-color: #DBEAFE; /* Blue 100 */
+  width: 80px;
+  height: 80px;
+  background-color: #DBEAFE; /* Light blue circle */
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.3);
   z-index: 2;
 }
 
-h2 {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 12px;
-}
-
-p {
-  font-size: 16px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
 @keyframes pulse-ring {
-  0% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.2);
-  }
-  70% {
-    box-shadow: 0 0 0 20px rgba(59, 130, 246, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
-  }
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+  70% { transform: scale(1); box-shadow: 0 0 0 20px rgba(59, 130, 246, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+
+.step-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.step-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: var(--primary-blue);
+  background: rgba(59, 130, 246, 0.1);
+  padding: 6px 16px;
+  border-radius: 100px;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.sub-text {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.mt-4 {
+  margin-top: 1rem;
 }
 </style>

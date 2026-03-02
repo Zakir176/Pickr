@@ -1,4 +1,5 @@
 from fastapi import FastAPI, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 import cv2
 import numpy as np
@@ -16,6 +17,15 @@ except ModuleNotFoundError:
     import analysis
 
 app = FastAPI()
+
+# Enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, specify actual origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Create a process pool for CPU-bound image analysis
 executor = ProcessPoolExecutor()
