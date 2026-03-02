@@ -4,10 +4,10 @@ import { Clock, HardDrive, Images, ChevronRight } from 'lucide-vue-next';
 import { formatSize, formatDate } from '../utils';
 
 const historyItems = ref([]);
+const keepers = ref([]);
 
 const stats = computed(() => {
   const totalS = historyItems.value.reduce((acc, item) => {
-    // Extract numeric MB from string like "372 MB"
     const mb = parseFloat(item.saved) || 0;
     return acc + mb;
   }, 0);
@@ -23,12 +23,21 @@ const stats = computed(() => {
 });
 
 onMounted(() => {
-  const saved = localStorage.getItem('pickr_history');
-  if (saved) {
+  const savedHistory = localStorage.getItem('pickr_history');
+  if (savedHistory) {
     try {
-      historyItems.value = JSON.parse(saved);
+      historyItems.value = JSON.parse(savedHistory);
     } catch (e) {
       console.error("Failed to load history:", e);
+    }
+  }
+
+  const savedKeepers = localStorage.getItem('pickr_keepers');
+  if (savedKeepers) {
+    try {
+      keepers.value = JSON.parse(savedKeepers);
+    } catch (e) {
+      console.error("Failed to load keepers:", e);
     }
   }
 });
@@ -38,6 +47,11 @@ const clearHistory = () => {
     historyItems.value = [];
     localStorage.removeItem('pickr_history');
   }
+};
+
+const removeKeeper = (keeper) => {
+  keepers.value = keepers.value.filter(k => k.filename !== keeper.filename);
+  localStorage.setItem('pickr_keepers', JSON.stringify(keepers.value));
 };
 </script>
 
@@ -114,7 +128,34 @@ const clearHistory = () => {
 
     <section class="keepers-section">
       <h3>The Keepers</h3>
-      <div class="empty-state glass-panel">
+      <div 
+        v-if="keepers.length > 0"
+        class="keepers-grid"
+      >
+        <div
+          v-for="keeper in keepers"
+          :key="keeper.filename"
+          class="keeper-card glass-panel"
+        >
+          <div class="keeper-thumbnail">
+            <Images :size="32" color="#3B82F6" />
+          </div>
+          <div class="keeper-info">
+            <span class="filename">{{ keeper.filename }}</span>
+            <span class="score">Score: {{ Math.round(keeper.score * 100) }}%</span>
+          </div>
+          <button 
+            class="remove-keeper" 
+            @click="removeKeeper(keeper)"
+          >
+            &times;
+          </button>
+        </div>
+      </div>
+      <div 
+        v-else 
+        class="empty-state glass-panel"
+      >
         <Images
           :size="32"
           class="opacity-50"
@@ -258,31 +299,93 @@ h3 {
 .history-savings {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   color: var(--text-secondary);
 }
 
 .history-savings .amount {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
-  color: #10B981; /* Emerald green */
+  color: #10B981;
+}
+
+.keepers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.keeper-card {
+  padding: 12px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  transition: transform 0.3s ease;
+}
+
+.keeper-card:hover {
+  transform: translateY(-4px);
+}
+
+.keeper-thumbnail {
+  aspect-ratio: 1;
+  background: rgba(59, 130, 246, 0.1);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.keeper-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.keeper-info .filename {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.keeper-info .score {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.remove-keeper {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.1);
+  border-radius: 50%;
+  color: var(--text-secondary);
+  font-size: 14px;
 }
 
 .empty-state {
   padding: 40px;
-  border-radius: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 12px;
   text-align: center;
   color: var(--text-secondary);
+  border-radius: 20px;
 }
 
-.empty-state p {
-  font-size: 14px;
-  font-weight: 600;
+.opacity-50 {
+  opacity: 0.5;
 }
-
-.opacity-50 { opacity: 0.5; }
 </style>
