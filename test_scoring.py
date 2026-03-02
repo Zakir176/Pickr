@@ -84,7 +84,7 @@ def test_analyze_images():
         results_by_name = {item["filename"]: item for item in all_items}
         
         # 1. Blur checks
-        assert results_by_name["sharp.jpg"]["metrics_raw"]["blur_var"] > results_by_name["blurry.jpg"]["metrics_raw"]["blur_var"], "Sharp image should have higher blur score than blurry image"
+        assert results_by_name["sharp.jpg"]["score_components"]["blur"] > results_by_name["blurry.jpg"]["score_components"]["blur"], "Sharp image should have higher blur score than blurry image"
         
         # 2. Exposure checks (Gray is ideal, Black is underexposed)
         # Note: score_components.exposure is normalized, higher is better
