@@ -7,7 +7,13 @@ const settings = ref({
   blurThreshold: 60,
   autoAdvance: true,
   deletionStrategy: 'trash', // 'trash' | 'permanent'
-  theme: 'system' // 'light' | 'dark' | 'system'
+  theme: 'system', // 'light' | 'dark' | 'system'
+  weights: {
+    blur: 0.4,
+    exposure: 0.3,
+    contrast: 0.2,
+    color: 0.1
+  }
 });
 
 // Load settings from localStorage
@@ -81,6 +87,41 @@ const clearStorage = () => {
             >
             <span class="value">{{ settings.blurThreshold }}%</span>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="settings-group">
+      <div class="group-label">
+        SCORING WEIGHTS
+      </div>
+      <div class="settings-card glass-panel">
+        <div 
+          v-for="(val, key) in settings.weights" 
+          :key="key"
+          class="weight-item"
+        >
+          <div class="weight-info">
+            <span class="weight-title">{{ key.charAt(0).toUpperCase() + key.slice(1) }}</span>
+            <span class="weight-percent">{{ Math.round(val * 100) }}%</span>
+          </div>
+          <input
+            v-model.number="settings.weights[key]"
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            class="slider weight-slider"
+          >
+        </div>
+        <div class="weight-footer">
+          <span 
+            class="total-weight"
+            :class="{ 'error': Math.round(Object.values(settings.weights).reduce((a, b) => a + b, 0) * 100) !== 100 }"
+          >
+            Total: {{ Math.round(Object.values(settings.weights).reduce((a, b) => a + b, 0) * 100) }}%
+          </span>
+          <p class="weight-hint">Must equal 100% for balanced scoring.</p>
         </div>
       </div>
     </section>
@@ -249,6 +290,61 @@ const clearStorage = () => {
   height: 1px;
   background: var(--glass-border);
   margin: 0 16px;
+}
+
+/* Weight Section */
+.weight-item {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.weight-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.weight-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.weight-percent {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--primary-blue);
+}
+
+.weight-slider {
+  width: 100% !important;
+}
+
+.weight-footer {
+  padding: 12px 16px;
+  background: rgba(0,0,0,0.03);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.total-weight {
+  font-size: 13px;
+  font-weight: 800;
+  color: #10B981;
+}
+
+.total-weight.error {
+  color: #EF4444;
+}
+
+.weight-hint {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0;
 }
 
 /* Slider styling */
