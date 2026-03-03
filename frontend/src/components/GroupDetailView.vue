@@ -1,10 +1,10 @@
 <script setup>
-import { ChevronLeft, Check, X, Heart, Maximize2, FileDigit } from 'lucide-vue-next';
-import { ref, reactive } from 'vue';
+import { ChevronLeft, Check, X, Heart, Maximize2, FileDigit, Columns, Bookmark } from 'lucide-vue-next';
+import { ref, reactive, computed } from 'vue';
 import StatusBadge from './StatusBadge.vue';
 import BestShotBadge from './BestShotBadge.vue';
 
-defineProps({
+const props = defineProps({
   group: {
     type: Object,
     required: true
@@ -12,6 +12,28 @@ defineProps({
 });
 
 const emit = defineEmits(['back', 'update-status', 'set-best', 'toggle-favorite']);
+
+// Comparison Logic
+const selectedForComparison = ref([]);
+const isComparisonMode = ref(false);
+
+const toggleSelection = (item) => {
+  const index = selectedForComparison.value.findIndex(i => i.filename === item.filename);
+  if (index === -1) {
+    if (selectedForComparison.value.length >= 2) {
+      selectedForComparison.value.shift();
+    }
+    selectedForComparison.value.push(item);
+  } else {
+    selectedForComparison.value.splice(index, 1);
+  }
+};
+
+const isSelected = (filename) => {
+  return selectedForComparison.value.some(i => i.filename === filename);
+};
+
+const canCompare = computed(() => selectedForComparison.value.length === 2);
 
 const handleSetStatus = (item, status) => {
   emit('update-status', item, status);
@@ -83,12 +105,22 @@ const handleTouchEnd = (e, item) => {
           {{ group.items.length }} items
         </p>
       </div>
-      <button
-        class="done-btn"
-        @click="$emit('back')"
-      >
-        Next
-      </button>
+      <div class="header-actions">
+        <button
+          v-if="canCompare"
+          class="compare-btn-top"
+          @click="isComparisonMode = true"
+        >
+          <Columns :size="18" />
+          <span>Compare 2</span>
+        </button>
+        <button
+          class="done-btn"
+          @click="$emit('back')"
+        >
+          Next
+        </button>
+      </div>
     </header>
 
     <div class="scroll-content">
@@ -120,10 +152,20 @@ const handleTouchEnd = (e, item) => {
               <!-- Overlays -->
               <div class="badge-row top">
                 <StatusBadge :status="item.recommendation" />
-                <BestShotBadge 
-                  :is-best="item.isBest" 
-                  @toggle="handleSetBest(item)" 
-                />
+                <div class="top-right-badges">
+                  <button 
+                    class="compare-toggle"
+                    :class="{ selected: isSelected(item.filename) }"
+                    @click.stop="toggleSelection(item)"
+                    title="Select for comparison"
+                  >
+                    <Columns :size="14" />
+                  </button>
+                  <BestShotBadge 
+                    :is-best="item.isBest" 
+                    @toggle="handleSetBest(item)" 
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -150,6 +192,14 @@ const handleTouchEnd = (e, item) => {
                 <Heart :size="20" :fill="item.isFavorite ? '#EF4444' : 'none'" :color="item.isFavorite ? '#EF4444' : 'currentColor'" />
               </button>
               <button 
+                class="action-btn hold" 
+                :class="{ active: item.recommendation === 'Hold' }"
+                aria-label="Hold Photo"
+                @click="handleSetStatus(item, 'Hold')"
+              >
+                <Bookmark :size="20" />
+              </button>
+              <button 
                 class="action-btn keep" 
                 :class="{ active: item.recommendation === 'Keep' }"
                 aria-label="Keep Photo"
@@ -170,6 +220,54 @@ const handleTouchEnd = (e, item) => {
         </div>
       </transition-group>
     </div>
+
+    <!-- Comparison Overlay -->
+    <transition name="fade">
+      <div v-if="isComparisonMode" class="comparison-overlay">
+        <header class="top-bar glass-panel overlay-header">
+          <button class="icon-btn" @click="isComparisonMode = false">
+            <X :size="24" />
+          </button>
+          <div class="header-title">
+            <h1>Compare Photos</h1>
+          </div>
+          <div class="header-actions">
+            <p class="sub-text">Pinch to zoom</p>
+          </div>
+        </header>
+
+        <div class="comparison-grid">
+          <div 
+            v-for="item in selectedForComparison" 
+            :key="item.filename" 
+            class="compare-item"
+          >
+            <div class="compare-photo-container">
+              <img :src="item.blobUrl" :alt="item.filename" class="compare-img">
+              <div class="compare-info">
+                <span class="filename">{{ item.filename }}</span>
+                <div class="actions mini">
+                  <button 
+                    class="action-btn mini keep" 
+                    :class="{ active: item.recommendation === 'Keep' }"
+                    @click="handleSetStatus(item, 'Keep')"
+                  >
+                    <Check :size="16" />
+                  </button>
+                  <button 
+                    class="action-btn mini delete" 
+                    :class="{ active: item.recommendation === 'Delete' }"
+                    @click="handleSetStatus(item, 'Delete')"
+                  >
+                    <X :size="16" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -192,6 +290,30 @@ const handleTouchEnd = (e, item) => {
 
 .header-title {
   text-align: center;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.compare-btn-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--primary-blue);
+  padding: 6px 12px;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.compare-btn-top:active {
+  transform: scale(0.95);
+  background: rgba(59, 130, 246, 0.2);
 }
 
 h1 {
@@ -264,6 +386,32 @@ h1 {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.top-right-badges {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.compare-toggle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(8px);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.2s ease;
+}
+
+.compare-toggle.selected {
+  background: var(--primary-blue);
+  color: white;
+  transform: scale(1.1);
 }
 
 .photo-inner {
@@ -345,9 +493,111 @@ h1 {
   box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);
 }
 
+.action-btn.hold.active {
+  background: #DBEAFE;
+  color: #2563EB;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
 .action-btn.delete.active {
   background: #FEE2E2;
   color: #DC2626;
   box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+}
+
+/* Comparison Overlay Styles */
+.comparison-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: white;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+
+.overlay-header {
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.comparison-grid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: #f0f0f0;
+  overflow: hidden;
+}
+
+.compare-item {
+  flex: 1;
+  background: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.compare-photo-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.compare-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+.compare-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  padding: 8px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.compare-info .filename {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions.mini {
+  gap: 8px;
+}
+
+.action-btn.mini {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+}
+
+@media (min-width: 768px) {
+  .comparison-grid {
+    flex-direction: row;
+  }
+}
+
+/* Transitions */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>
