@@ -143,6 +143,12 @@ const analyzePhotos = async () => {
     await new Promise(resolve => setTimeout(resolve, 400));
     
     analysisStep.value = 'analyzing';
+    
+    // Add custom weights from settings if they exist
+    if (settings.value.weights) {
+      formData.append('weights', JSON.stringify(settings.value.weights));
+    }
+
     const response = await api.post('/analyze', formData);
     
     // The backend returns groups: [{ title: string, items: Array }]

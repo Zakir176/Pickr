@@ -1,9 +1,10 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List
+from typing import List, Optional
 import cv2
 import numpy as np
 import io
+import json
 import asyncio
 from concurrent.futures import ProcessPoolExecutor
 from PIL import Image
@@ -46,7 +47,7 @@ KEEP_THRESHOLD = 0.75
 REVIEW_THRESHOLD = 0.50
 
 # --- Scoring Configuration ---
-SCORING_WEIGHTS = {"blur": 0.4, "exposure": 0.3, "contrast": 0.2, "color": 0.1}
+DEFAULT_SCORING_WEIGHTS = {"blur": 0.4, "exposure": 0.3, "contrast": 0.2, "color": 0.1}
 
 
 def normalize_simple(value, max_val):
@@ -71,11 +72,14 @@ def get_recommendation(final_score: float) -> str:
         return "Delete"
 
 
-def analyze_single_image(filename, contents):
+def analyze_single_image(filename, contents, weights=None):
     """
     Perform CPU-bound analysis on a single image.
     This function is designed to run in a separate process.
     """
+    if weights is None:
+        weights = DEFAULT_SCORING_WEIGHTS
+
     try:
         # --- HEIC & Format Handling ---
         pil_img = Image.open(io.BytesIO(contents))
@@ -106,18 +110,26 @@ def analyze_single_image(filename, contents):
 
         # --- 4. Final Score ---
         final_score = (
-            (norm_blur * SCORING_WEIGHTS["blur"])
-            + (norm_exposure * SCORING_WEIGHTS["exposure"])
-            + (norm_contrast * SCORING_WEIGHTS["contrast"])
-            + (norm_color * SCORING_WEIGHTS["color"])
+            (norm_blur * weights.get("blur", 0.4))
+            + (norm_exposure * weights.get("exposure", 0.3))
+            + (norm_contrast * weights.get("contrast", 0.2))
+            + (norm_color * weights.get("color", 0.1))
         )
 
         # --- 5. Recommendation ---
         recommendation = get_recommendation(final_score)
 
+        # Get original image dimensions for face box scaling
+        h, w = gray.shape
+
         return {
             "filename": filename,
             "phash": phash,
+            "dimensions": {"width": w, "height": h},
+            "faces": [
+                {"x": int(x), "y": int(y), "w": int(w_f), "h": int(h_f)} 
+                for (x, y, w_f, h_f) in faces
+            ] if faces is not None else [],
             "score_components": {
                 "blur": round(norm_blur, 2),
                 "exposure": round(norm_exposure, 2),
@@ -146,15 +158,26 @@ def analyze_single_image(filename, contents):
 
 
 @app.post("/analyze")
-async def analyze_images(files: List[UploadFile] = File(...)):
+async def analyze_images(
+    files: List[UploadFile] = File(...),
+    weights: Optional[str] = Form(None)
+):
     loop = asyncio.get_event_loop()
     tasks = []
+
+    # Parse weights if provided
+    scoring_weights = DEFAULT_SCORING_WEIGHTS
+    if weights:
+        try:
+            scoring_weights = json.loads(weights)
+        except Exception:
+            pass
 
     for file in files:
         contents = await file.read()
         # Offload CPU-bound task to process pool
         tasks.append(
-            loop.run_in_executor(executor, analyze_single_image, file.filename, contents)
+            loop.run_in_executor(executor, analyze_single_image, file.filename, contents, scoring_weights)
         )
 
     # Wait for all analysis tasks to complete

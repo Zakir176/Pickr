@@ -1,12 +1,12 @@
 <script setup>
-import { CheckCircle, Trash2, Eye, AlertCircle } from 'lucide-vue-next';
+import { CheckCircle, Trash2, Eye, AlertCircle, Bookmark } from 'lucide-vue-next';
 
 const props = defineProps({
   status: {
     type: String,
     required: false,
     default: 'Review',
-    validator: (value) => !value || ['Keep', 'Delete', 'Review', 'High Quality', 'Med Quality', 'Low Quality', 'Error'].includes(value)
+    validator: (value) => !value || ['Keep', 'Delete', 'Review', 'Hold', 'High Quality', 'Med Quality', 'Low Quality', 'Error'].includes(value)
   },
   type: {
     type: String,
@@ -23,6 +23,7 @@ const getIcon = () => {
     case 'Keep': return CheckCircle;
     case 'Delete': return Trash2;
     case 'Review': return Eye;
+    case 'Hold': return Bookmark;
     case 'Error': return AlertCircle;
     default: return null;
   }
@@ -33,6 +34,7 @@ const getColorClass = () => {
     case 'Keep': return 'bg-green';
     case 'Delete': return 'bg-red';
     case 'Review': return 'bg-yellow';
+    case 'Hold': return 'bg-blue';
     case 'Error': return 'bg-gray-dark'; // A distinct color for errors
     default: return 'bg-gray';
   }
@@ -41,7 +43,7 @@ const getColorClass = () => {
 
 <template>
   <div
-    v-if="['Keep', 'Delete', 'Review', 'Error'].includes(status || 'Review')"
+    v-if="['Keep', 'Delete', 'Review', 'Hold', 'Error'].includes(status || 'Review')"
     class="status-badge"
     :class="getColorClass()"
   >
@@ -90,6 +92,7 @@ const getColorClass = () => {
 .bg-green { background-color: #10B981; }
 .bg-red { background-color: #EF4444; }
 .bg-yellow { background-color: #F59E0B; }
+.bg-blue { background-color: #3B82F6; }
 .bg-gray { background-color: #6B7280; }
 .bg-gray-dark { background-color: #4B5563; } /* New color for errors */
 </style>

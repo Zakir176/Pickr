@@ -1,12 +1,12 @@
 <script setup>
-import { ChevronLeft, Wand2, ChevronDown, Download, Check, X, RotateCcw, FolderDown, Heart } from 'lucide-vue-next';
+import { ChevronLeft, Wand2, ChevronDown, Download, Check, X, RotateCcw, FolderDown, Heart, Bookmark } from 'lucide-vue-next';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 
 const isExporting = ref(false);
 
 const downloadKeepers = async () => {
-  const keepers = props.flatResults.filter(r => r.recommendation === 'Keep');
+  const keepers = props.flatResults.filter(r => r.recommendation === 'Keep' || r.recommendation === 'Hold');
   if (keepers.length === 0) return;
   
   isExporting.value = true;
@@ -33,7 +33,7 @@ const downloadKeepers = async () => {
 };
 import StatusBadge from './StatusBadge.vue';
 import BestShotBadge from './BestShotBadge.vue';
-import { computed, ref, reactive } from 'vue';
+import { computed, ref, reactive, watch } from 'vue';
 import { getQualityLabel } from '../utils';
 
 const props = defineProps({
@@ -52,6 +52,47 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['back', 'confirm', 'view-group', 'update-status', 'smart-clean', 'set-best', 'undo', 'toggle-favorite']);
+
+// Selection Mode State
+const isSelectionMode = ref(false);
+const selectedFilenames = ref(new Set());
+
+const toggleSelectionMode = () => {
+  isSelectionMode.value = !isSelectionMode.value;
+  if (!isSelectionMode.value) {
+    selectedFilenames.value.clear();
+  }
+};
+
+const toggleItemSelection = (filename) => {
+  if (selectedFilenames.value.has(filename)) {
+    selectedFilenames.value.delete(filename);
+  } else {
+    selectedFilenames.value.add(filename);
+  }
+};
+
+const isItemSelected = (filename) => selectedFilenames.value.has(filename);
+
+const toggleGroupSelection = (group) => {
+  const allInGroupSelected = group.items.every(item => selectedFilenames.value.has(item.filename));
+  if (allInGroupSelected) {
+    group.items.forEach(item => selectedFilenames.value.delete(item.filename));
+  } else {
+    group.items.forEach(item => selectedFilenames.value.add(item.filename));
+  }
+};
+
+const applyBulkAction = (status) => {
+  selectedFilenames.value.forEach(filename => {
+    const item = props.flatResults.find(r => r.filename === filename);
+    if (item) {
+      emit('update-status', item, status);
+    }
+  });
+  isSelectionMode.value = false;
+  selectedFilenames.value.clear();
+};
 
 // Local state for collapsed groups
 const collapsedGroups = ref({});
@@ -154,7 +195,13 @@ const handleTouchEnd = (e, item) => {
       <h1>Curation Results</h1>
       <div class="header-actions">
         <button
-          v-if="canUndo"
+          class="text-btn"
+          @click="toggleSelectionMode"
+        >
+          {{ isSelectionMode ? 'Cancel' : 'Select' }}
+        </button>
+        <button
+          v-if="canUndo && !isSelectionMode"
           class="undo-btn"
           aria-label="Undo last action"
           @click="$emit('undo')"
@@ -162,6 +209,7 @@ const handleTouchEnd = (e, item) => {
           <RotateCcw :size="16" />
         </button>
         <button
+          v-if="!isSelectionMode"
           class="smart-btn"
           aria-label="Smart Clean Bulk Action"
           title="Smart Clean"
@@ -208,11 +256,19 @@ const handleTouchEnd = (e, item) => {
               >
                 <h3>{{ group.title }}</h3>
                 <div class="group-header-right">
+                  <button
+                    v-if="isSelectionMode"
+                    class="select-all-btn"
+                    @click.stop="toggleGroupSelection(group)"
+                  >
+                    {{ group.items.every(item => selectedFilenames.has(item.filename)) ? 'Deselect Group' : 'Select Group' }}
+                  </button>
                   <span
-                    v-if="group.items.length > 1"
+                    v-if="group.items.length > 1 && !isSelectionMode"
                     class="sub-text"
                   >Best match selected</span>
                   <ChevronDown
+                    v-if="!isSelectionMode"
                     :class="{ 'rotate-180': collapsedGroups[group.title] }"
                     :size="20"
                     class="chevron-icon"
@@ -229,14 +285,15 @@ const handleTouchEnd = (e, item) => {
                     v-for="(item, i) in group.items"
                     :key="i" 
                     class="photo-card" 
-                    @click="$emit('view-group', group)"
+                    :class="{ 'selected': isItemSelected(item.filename) }"
+                    @click="isSelectionMode ? toggleItemSelection(item.filename) : $emit('view-group', group)"
                   >
                     <div 
                       class="photo-inner"
                       :style="{ transform: `translateX(${swipeOffsets[item.filename] || 0}px)` }"
-                      @touchstart="handleTouchStart($event, item.filename)"
-                      @touchmove="handleTouchMove($event, item.filename)"
-                      @touchend="handleTouchEnd($event, item)"
+                      @touchstart="!isSelectionMode && handleTouchStart($event, item.filename)"
+                      @touchmove="!isSelectionMode && handleTouchMove($event, item.filename)"
+                      @touchend="!isSelectionMode && handleTouchEnd($event, item)"
                     >
                       <img 
                         v-if="item.blobUrl" 
@@ -252,9 +309,19 @@ const handleTouchEnd = (e, item) => {
                         <span class="filename">{{ item.filename }}</span>
                       </div>
                       
+                      <!-- Selection Indicator -->
+                      <div 
+                        v-if="isSelectionMode" 
+                        class="selection-indicator"
+                      >
+                        <div class="selection-circle">
+                          <Check v-if="isItemSelected(item.filename)" :size="14" stroke-width="4" />
+                        </div>
+                      </div>
+
                       <!-- Download Button -->
                       <button
-                        v-if="item.blobUrl"
+                        v-if="item.blobUrl && !isSelectionMode"
                         class="download-btn"
                         @click.stop="downloadPhoto(item.blobUrl, item.filename)"
                       >
@@ -270,7 +337,7 @@ const handleTouchEnd = (e, item) => {
                           :error-message="item.error"
                         />
                         <BestShotBadge 
-                          v-if="item.isBest" 
+                          v-if="item.isBest && !isSelectionMode" 
                           :is-best="true" 
                           style="margin-top: 8px;" 
                           @toggle="handleSetBest(item)"
@@ -278,6 +345,7 @@ const handleTouchEnd = (e, item) => {
                       </div>
 
                       <div
+                    v-if="!isSelectionMode"
                     class="control-overlay"
                     @click.stop
                   >
@@ -288,6 +356,14 @@ const handleTouchEnd = (e, item) => {
                       @click="$emit('toggle-favorite', item)"
                     >
                       <Heart :size="14" :fill="item.isFavorite ? '#EF4444' : 'none'" :color="item.isFavorite ? '#EF4444' : 'currentColor'" />
+                    </button>
+                    <button 
+                      class="ctrl-btn hold" 
+                      :class="{ active: item.recommendation === 'Hold' }"
+                      aria-label="Hold Photo"
+                      @click="handleSetStatus(item, 'Hold')"
+                    >
+                      <Bookmark :size="14" />
                     </button>
                     <button 
                       class="ctrl-btn keep" 
@@ -348,24 +424,55 @@ const handleTouchEnd = (e, item) => {
 
     <!-- Bottom Action Bar -->
     <div class="bottom-action-bar glass-panel">
-      <button
-        class="confirm-btn"
-        @click="$emit('confirm')"
-      >
-        <Wand2 :size="20" />
-        <span>Confirm Selection ({{ confirmedCount }})</span>
-      </button>
+      <template v-if="!isSelectionMode">
+        <button
+          class="confirm-btn"
+          @click="$emit('confirm')"
+        >
+          <Wand2 :size="20" />
+          <span>Confirm Selection ({{ confirmedCount }})</span>
+        </button>
 
-      <button
-        v-if="flatResults.some(r => r.recommendation === 'Keep')"
-        class="export-btn"
-        :disabled="isExporting"
-        @click="downloadKeepers"
-      >
-        <FolderDown v-if="!isExporting" :size="20" />
-        <RotateCcw v-else class="animate-spin" :size="20" />
-        <span>{{ isExporting ? 'Preparing ZIP...' : 'Download Keepers' }}</span>
-      </button>
+        <button
+          v-if="flatResults.some(r => r.recommendation === 'Keep' || r.recommendation === 'Hold')"
+          class="export-btn"
+          :disabled="isExporting"
+          @click="downloadKeepers"
+        >
+          <FolderDown v-if="!isExporting" :size="20" />
+          <RotateCcw v-else class="animate-spin" :size="20" />
+          <span>{{ isExporting ? 'Preparing ZIP...' : 'Download Keepers' }}</span>
+        </button>
+      </template>
+
+      <template v-else>
+        <div class="bulk-actions">
+          <button 
+            class="bulk-btn keep" 
+            :disabled="selectedFilenames.size === 0"
+            @click="applyBulkAction('Keep')"
+          >
+            <Check :size="20" />
+            <span>Keep ({{ selectedFilenames.size }})</span>
+          </button>
+          <button 
+            class="bulk-btn hold" 
+            :disabled="selectedFilenames.size === 0"
+            @click="applyBulkAction('Hold')"
+          >
+            <Bookmark :size="20" />
+            <span>Hold</span>
+          </button>
+          <button 
+            class="bulk-btn delete" 
+            :disabled="selectedFilenames.size === 0"
+            @click="applyBulkAction('Delete')"
+          >
+            <X :size="20" />
+            <span>Delete</span>
+          </button>
+        </div>
+      </template>
 
       <p class="disclaimer">
         All deleted photos will be moved to Recently Deleted in your Photos app.
@@ -396,6 +503,13 @@ h1 {
   font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.5px;
+}
+
+.text-btn {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary-blue);
+  padding: 8px;
 }
 
 .header-actions {
@@ -497,6 +611,38 @@ h1 {
   border-radius: 20px;
   overflow: hidden;
   box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.photo-card.selected {
+  border-color: var(--primary-blue);
+  transform: scale(0.95);
+}
+
+.selection-indicator {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 100;
+}
+
+.selection-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid #E5E7EB;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.selected .selection-circle {
+  background: var(--primary-blue);
+  border-color: var(--primary-blue);
 }
 
 .photo-inner {
@@ -571,6 +717,11 @@ h1 {
   color: white;
 }
 
+.ctrl-btn.active.hold {
+  background: #3B82F6;
+  color: white;
+}
+
 .ctrl-btn.active.delete {
   background: #EF4444;
   color: white;
@@ -595,6 +746,23 @@ h1 {
   padding: 4px 0;
 }
 
+.select-all-btn {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--primary-blue);
+  background: rgba(59, 130, 246, 0.1);
+  padding: 4px 10px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.group-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .spacer-bottom {
   height: 140px;
 }
@@ -607,6 +775,44 @@ h1 {
   padding: 20px 20px 40px;
   z-index: 100;
   box-shadow: 0 -4px 12px rgba(0,0,0,0.03);
+  background: var(--white);
+}
+
+.bulk-actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.bulk-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 16px;
+  font-size: 11px;
+  font-weight: 800;
+  transition: all 0.2s ease;
+  background: #F3F4F6;
+  color: var(--text-secondary);
+}
+
+.bulk-btn:disabled {
+  opacity: 0.5;
+  filter: grayscale(1);
+}
+
+.bulk-btn.keep { color: #10B981; }
+.bulk-btn.hold { color: #3B82F6; }
+.bulk-btn.delete { color: #EF4444; }
+
+.bulk-btn:not(:disabled):active {
+  transform: scale(0.9);
+  background: #E5E7EB;
 }
 
 .confirm-btn {
