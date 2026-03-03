@@ -1,12 +1,12 @@
 <script setup>
-import { ChevronLeft, Wand2, ChevronDown, Download, Check, X, RotateCcw, FolderDown, Heart } from 'lucide-vue-next';
+import { ChevronLeft, Wand2, ChevronDown, Download, Check, X, RotateCcw, FolderDown, Heart, Bookmark } from 'lucide-vue-next';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 
 const isExporting = ref(false);
 
 const downloadKeepers = async () => {
-  const keepers = props.flatResults.filter(r => r.recommendation === 'Keep');
+  const keepers = props.flatResults.filter(r => r.recommendation === 'Keep' || r.recommendation === 'Hold');
   if (keepers.length === 0) return;
   
   isExporting.value = true;
@@ -290,6 +290,14 @@ const handleTouchEnd = (e, item) => {
                       <Heart :size="14" :fill="item.isFavorite ? '#EF4444' : 'none'" :color="item.isFavorite ? '#EF4444' : 'currentColor'" />
                     </button>
                     <button 
+                      class="ctrl-btn hold" 
+                      :class="{ active: item.recommendation === 'Hold' }"
+                      aria-label="Hold Photo"
+                      @click="handleSetStatus(item, 'Hold')"
+                    >
+                      <Bookmark :size="14" />
+                    </button>
+                    <button 
                       class="ctrl-btn keep" 
                       :class="{ active: item.recommendation === 'Keep' }"
                       aria-label="Keep Photo"
@@ -568,6 +576,11 @@ h1 {
 
 .ctrl-btn.active.keep {
   background: #10B981;
+  color: white;
+}
+
+.ctrl-btn.active.hold {
+  background: #3B82F6;
   color: white;
 }
 
