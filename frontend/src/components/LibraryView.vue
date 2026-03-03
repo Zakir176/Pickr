@@ -138,7 +138,13 @@ const removeKeeper = (keeper) => {
           class="keeper-card glass-panel"
         >
           <div class="keeper-thumbnail">
-            <Images :size="32" color="#3B82F6" />
+            <img 
+              v-if="keeper.thumbnail" 
+              :src="keeper.thumbnail" 
+              class="keeper-img" 
+              alt="Thumbnail"
+            >
+            <Images v-else :size="32" color="#3B82F6" />
           </div>
           <div class="keeper-info">
             <span class="filename">{{ keeper.filename }}</span>
@@ -336,6 +342,13 @@ h3 {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden; /* For images */
+}
+
+.keeper-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .keeper-info {

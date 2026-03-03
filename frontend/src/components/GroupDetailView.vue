@@ -1,5 +1,5 @@
 <script setup>
-import { ChevronLeft, Check, X, Heart } from 'lucide-vue-next';
+import { ChevronLeft, Check, X, Heart, Maximize2, FileDigit } from 'lucide-vue-next';
 import { ref, reactive } from 'vue';
 import StatusBadge from './StatusBadge.vue';
 import BestShotBadge from './BestShotBadge.vue';
@@ -134,6 +134,9 @@ const handleTouchEnd = (e, item) => {
               <div class="pills">
                 <span class="pill">Blur: {{ Math.round(item.score_components.blur * 100) }}%</span>
                 <span class="pill">Exp: {{ Math.round(item.score_components.exposure * 100) }}%</span>
+                <span v-if="item.metadata?.size" class="pill secondary">
+                  <FileDigit :size="10" /> {{ item.metadata.size }}
+                </span>
               </div>
             </div>
             
@@ -308,6 +311,14 @@ h1 {
   border-radius: 8px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pill.secondary {
+  background: rgba(59, 130, 246, 0.05);
+  color: var(--primary-blue);
 }
 
 .actions {

@@ -12,7 +12,7 @@ import SettingsView from './components/SettingsView.vue';
 import { Info } from 'lucide-vue-next';
 import api from './api';
 import { ref, onMounted, computed, watch } from 'vue';
-import { estimateSpaceSaved, resizeImage } from './utils';
+import { estimateSpaceSaved, resizeImage, generateThumbnail, formatSize } from './utils';
 
 const selectedFiles = ref([]);
 const currentView = ref('upload'); // 'upload' | 'analyzing' | 'results' | 'groupDetail' | 'success'
@@ -118,7 +118,14 @@ const analyzePhotos = async () => {
   analysisStep.value = 'resizing';
   
   const formData = new FormData();
+  const fileMetadata = {};
+
   for (const file of selectedFiles.value) {
+    fileMetadata[file.name] = {
+      size: formatSize(file.size / (1024 * 1024)), // Store in MB
+      originalSize: file.size
+    };
+
     try {
       // Resize to max 1600px to save bandwidth
       const resizedBlob = await resizeImage(file, 1600);
@@ -145,6 +152,7 @@ const analyzePhotos = async () => {
       items: group.items.map(item => ({
         ...item,
         blobUrl: fileBlobUrls.value[item.filename],
+        metadata: fileMetadata[item.filename] || {},
         isConfirmed: false, // Initial state
         isFavorite: savedKeepers.some(k => k.filename === item.filename)
       }))
@@ -192,7 +200,7 @@ const handleUndo = () => {
   }
 };
 
-const handleToggleFavorite = (item) => {
+const handleToggleFavorite = async (item) => {
   if (!analysisResults.value) return;
   pushToUndoStack();
   
@@ -204,13 +212,22 @@ const handleToggleFavorite = (item) => {
       // Update keepers list in localStorage (for persistent stats/history)
       const keepers = JSON.parse(localStorage.getItem('pickr_keepers') || '[]');
       if (target.isFavorite) {
+        // Generate thumbnail for visual storage
+        let thumbnail = null;
+        try {
+          thumbnail = await generateThumbnail(target.blobUrl, 160); // Small thumbnail
+        } catch (e) {
+          console.error("Thumbnail generation failed:", e);
+        }
+
         // Avoid duplicates
         if (!keepers.some(k => k.filename === target.filename)) {
           keepers.unshift({
             filename: target.filename,
             score: target.final_score,
             date: new Date().toISOString(),
-            phash: target.phash
+            phash: target.phash,
+            thumbnail: thumbnail // New field!
           });
         }
       } else {
