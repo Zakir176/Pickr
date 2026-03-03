@@ -162,12 +162,27 @@ const handleTouchEnd = (e, item) => {
                     <Columns :size="14" />
                   </button>
                   <BestShotBadge 
-                    :is-best="item.isBest" 
-                    @toggle="handleSetBest(item)" 
-                  />
-                </div>
+                  :is-best="item.isBest" 
+                  @toggle="handleSetBest(item)" 
+                />
+              </div>
+
+              <!-- Face Bounding Boxes -->
+              <div 
+                v-for="(face, idx) in item.faces" 
+                :key="idx"
+                class="face-box"
+                :style="{
+                  left: (face.x / item.dimensions.width * 100) + '%',
+                  top: (face.y / item.dimensions.height * 100) + '%',
+                  width: (face.w / item.dimensions.width * 100) + '%',
+                  height: (face.h / item.dimensions.height * 100) + '%'
+                }"
+              >
+                <div class="face-tag">Face detected</div>
               </div>
             </div>
+          </div>
           </div>
 
           <div class="info-row">
@@ -376,6 +391,35 @@ h1 {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.face-box {
+  position: absolute;
+  border: 2px solid #3B82F6;
+  border-radius: 4px;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+  pointer-events: none;
+  z-index: 5;
+  transition: opacity 0.3s ease;
+  opacity: 0.2; /* Subtle by default */
+}
+
+.image-container:hover .face-box {
+  opacity: 0.8; /* Highlight on hover */
+}
+
+.face-tag {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  background: #3B82F6;
+  color: white;
+  font-size: 8px;
+  font-weight: 800;
+  padding: 2px 4px;
+  border-radius: 2px 2px 0 0;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .badge-row.top {
