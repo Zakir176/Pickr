@@ -17,19 +17,19 @@ defineEmits(['finish']);
 <template>
   <div class="success-view">
     <div class="content">
-      <div class="icon-circle">
+      <div class="icon-circle pop-in">
         <CheckCircle2
           :size="64"
           color="#10B981"
         />
       </div>
       
-      <h1>Gallery Cleaned!</h1>
-      <p class="description">
+      <h1 class="slide-up">Gallery Cleaned!</h1>
+      <p class="description slide-up">
         You've successfully curated your latest photos and kept only the best shots.
       </p>
       
-      <div class="stats-card">
+      <div class="stats-card pop-in-delayed">
         <div class="stat-item">
           <span class="stat-value text-red">{{ stats.deletedCount }}</span>
           <span class="stat-label">Photos Deleted</span>
@@ -207,5 +207,29 @@ h1 {
   align-items: center;
   justify-content: center;
   gap: 8px;
+}
+
+/* Animations */
+@keyframes pop-in {
+  0% { transform: scale(0.5); opacity: 0; }
+  70% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes slide-up {
+  0% { transform: translateY(20px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.pop-in {
+  animation: pop-in 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+
+.pop-in-delayed {
+  animation: pop-in 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.4s both;
+}
+
+.slide-up {
+  animation: slide-up 0.5s ease-out 0.2s both;
 }
 </style>
