@@ -7,7 +7,7 @@ import io
 import json
 import asyncio
 from concurrent.futures import ProcessPoolExecutor
-from PIL import Image
+from PIL import Image, ExifTags
 from pillow_heif import register_heif_opener
 
 register_heif_opener()  # Enable HEIC support in Pillow
@@ -72,6 +72,32 @@ def get_recommendation(final_score: float) -> str:
         return "Delete"
 
 
+def extract_exif(pil_img):
+    """Extracts basic EXIF metadata from a PIL image."""
+    exif_data = {}
+    try:
+        info = pil_img.getexif()
+        if info:
+            for tag, value in info.items():
+                decoded = ExifTags.TAGS.get(tag, tag)
+                # Handle common useful tags
+                if decoded in ["Make", "Model", "ExposureTime", "FNumber", "ISOSpeedRatings", "FocalLength"]:
+                    # Handle fractions (like ExposureTime)
+                    if hasattr(value, "numerator") and hasattr(value, "denominator"):
+                        if value.denominator != 0:
+                            if decoded == "ExposureTime":
+                                exif_data[decoded] = f"{value.numerator}/{value.denominator}"
+                            else:
+                                exif_data[decoded] = float(value.numerator) / value.denominator
+                        else:
+                            exif_data[decoded] = str(value)
+                    else:
+                        exif_data[decoded] = str(value)
+    except Exception as e:
+        print(f"EXIF extraction error: {e}")
+    return exif_data
+
+
 def analyze_single_image(filename, contents, weights=None):
     """
     Perform CPU-bound analysis on a single image.
@@ -101,6 +127,8 @@ def analyze_single_image(filename, contents, weights=None):
         contrast_raw = analysis.calculate_contrast(gray)
         color_raw = analysis.calculate_colorfulness(img)
         phash = analysis.calculate_phash(img)
+        composition = analysis.calculate_composition(gray, faces)
+        exif = extract_exif(pil_img)
 
         # --- 3. Normalize ---
         norm_blur = normalize_simple(blur_raw, MAX_BLUR_THRESHOLD)
@@ -130,6 +158,8 @@ def analyze_single_image(filename, contents, weights=None):
                 {"x": int(x), "y": int(y), "w": int(w_f), "h": int(h_f)} 
                 for (x, y, w_f, h_f) in faces
             ] if faces is not None else [],
+            "exif": exif,
+            "composition": composition,
             "score_components": {
                 "blur": round(norm_blur, 2),
                 "exposure": round(norm_exposure, 2),
