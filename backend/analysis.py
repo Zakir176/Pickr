@@ -117,6 +117,45 @@ def calculate_phash(img_bgr):
     return str(imagehash.phash(pil_img))
 
 
+def calculate_composition(gray_img, faces=None):
+    """
+    Analyzes composition based on Rule of Thirds.
+    Checks if subjects (faces or points of interest) align with the four 'power points'.
+    Returns: { score: 0.0-1.0, description: str }
+    """
+    h, w = gray_img.shape
+    power_points = [
+        (h / 3, w / 3), (h / 3, 2 * w / 3),
+        (2 * h / 3, w / 3), (2 * h / 3, 2 * w / 3)
+    ]
+    
+    subjects = []
+    if faces is not None and len(faces) > 0:
+        for x, y, w_f, h_f in faces:
+            subjects.append((y + h_f / 2, x + w_f / 2))
+    else:
+        # If no faces, find the most "interesting" point using edge density
+        edges = cv2.Canny(gray_img, 100, 200)
+        # Use a large blur to find the center of edge density
+        density = cv2.GaussianBlur(edges.astype(float), (0, 0), sigmaX=w/10, sigmaY=h/10)
+        _, _, _, max_loc = cv2.minMaxLoc(density)
+        subjects.append((max_loc[1], max_loc[0])) # (y, x)
+
+    # Calculate min distance to any power point for each subject
+    min_distances = []
+    for sy, sx in subjects:
+        dists = [np.sqrt((sy - py)**2 + (sx - px)**2) for py, px in power_points]
+        min_distances.append(min(dists))
+
+    # Normalize score: max distance is roughly diagonal / 3
+    max_dist = np.sqrt(h**2 + w**2) / 3
+    avg_min_dist = np.mean(min_distances)
+    score = max(0.0, 1.0 - (avg_min_dist / max_dist))
+    
+    description = "Subject aligned with Rule of Thirds" if score > 0.7 else "Subject centered or off-axis"
+    return {"score": round(float(score), 2), "description": description}
+
+
 def cluster_results(results, threshold=10):
     """
     Groups analysis results based on perceptual hash similarity.
