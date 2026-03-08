@@ -1,5 +1,5 @@
 <script setup>
-import { ChevronLeft, Check, X, Heart, Maximize2, FileDigit, Columns, Bookmark } from 'lucide-vue-next';
+import { ChevronLeft, Check, X, Heart, Maximize2, FileDigit, Columns, Bookmark, Camera, Info } from 'lucide-vue-next';
 import { ref, reactive, computed } from 'vue';
 import StatusBadge from './StatusBadge.vue';
 import BestShotBadge from './BestShotBadge.vue';
@@ -230,6 +230,26 @@ const handleTouchEnd = (e, item) => {
               >
                 <X :size="20" />
               </button>
+            </div>
+          </div>
+
+          <!-- Technical Metadata & Composition -->
+          <div class="tech-info-row glass-panel" v-if="item.exif || item.composition">
+            <div class="tech-section" v-if="item.exif && Object.keys(item.exif).length > 0">
+              <Camera :size="14" class="tech-icon" />
+              <div class="tech-tags">
+                <span v-if="item.exif.Model" class="tech-tag">{{ item.exif.Model }}</span>
+                <span v-if="item.exif.FNumber" class="tech-tag">f/{{ item.exif.FNumber }}</span>
+                <span v-if="item.exif.ExposureTime" class="tech-tag">{{ item.exif.ExposureTime }}s</span>
+                <span v-if="item.exif.ISOSpeedRatings" class="tech-tag">ISO {{ item.exif.ISOSpeedRatings }}</span>
+              </div>
+            </div>
+            <div class="tech-section" v-if="item.composition">
+              <Info :size="14" class="tech-icon blue" />
+              <span class="tech-text">{{ item.composition.description }}</span>
+              <div class="composition-bar">
+                <div class="bar-fill" :style="{ width: (item.composition.score * 100) + '%' }"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -547,6 +567,68 @@ h1 {
   background: #FEE2E2;
   color: #DC2626;
   box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+}
+
+.tech-info-row {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.tech-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tech-icon {
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+.tech-icon.blue {
+  color: var(--primary-blue);
+  opacity: 1;
+}
+
+.tech-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tech-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: rgba(0, 0, 0, 0.05);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.tech-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.composition-bar {
+  width: 40px;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: var(--primary-blue);
+  border-radius: 2px;
 }
 
 /* Comparison Overlay Styles */
