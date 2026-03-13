@@ -7,6 +7,9 @@ from PIL import Image
 face_cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
 face_cascade = cv2.CascadeClassifier(face_cascade_path)
 
+eye_cascade_path = cv2.data.haarcascades + "haarcascade_eye.xml"
+eye_cascade = cv2.CascadeClassifier(eye_cascade_path)
+
 
 def detect_faces(gray_img):
     """Detects faces in a grayscale image. Returns list of (x, y, w, h)."""
@@ -14,6 +17,35 @@ def detect_faces(gray_img):
         gray_img, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30)
     )
     return faces
+
+
+def detect_blinks(gray_img, faces):
+    """
+    Detects potential blinks by checking for eyes within face regions.
+    Returns: (bool blink_detected, list face_indices_with_blinks)
+    """
+    if faces is None or len(faces) == 0:
+        return False, []
+
+    blink_detected = False
+    face_indices = []
+
+    for i, (x, y, w, h) in enumerate(faces):
+        # Eyes are usually in the top half of the face
+        roi_gray = gray_img[y : y + int(h * 0.7), x : x + w]
+        
+        # Detect eyes in face ROI
+        eyes = eye_cascade.detectMultiScale(
+            roi_gray, scaleFactor=1.1, minNeighbors=10, minSize=(w // 10, h // 10)
+        )
+        
+        # Heuristic: If we find fewer than 2 eyes in a front-facing face, 
+        # it's likely a blink or occlusion worth reviewing.
+        if len(eyes) < 2:
+            blink_detected = True
+            face_indices.append(i)
+            
+    return blink_detected, face_indices
 
 
 def calculate_blur(gray_img, faces=None):

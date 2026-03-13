@@ -1,5 +1,5 @@
 <script setup>
-import { ChevronLeft, Check, X, Heart, Maximize2, FileDigit, Columns, Bookmark, Camera, Info } from 'lucide-vue-next';
+import { ChevronLeft, Check, X, Heart, Maximize2, FileDigit, Columns, Bookmark, Camera, Info, EyeOff } from 'lucide-vue-next';
 import { ref, reactive, computed } from 'vue';
 import StatusBadge from './StatusBadge.vue';
 import BestShotBadge from './BestShotBadge.vue';
@@ -172,6 +172,7 @@ const handleTouchEnd = (e, item) => {
                 v-for="(face, idx) in item.faces" 
                 :key="idx"
                 class="face-box"
+                :class="{ 'has-blink': item.blink_indices?.includes(idx) }"
                 :style="{
                   left: (face.x / item.dimensions.width * 100) + '%',
                   top: (face.y / item.dimensions.height * 100) + '%',
@@ -179,8 +180,17 @@ const handleTouchEnd = (e, item) => {
                   height: (face.h / item.dimensions.height * 100) + '%'
                 }"
               >
-                <div class="face-tag">Face detected</div>
+                <div class="face-tag">{{ item.blink_indices?.includes(idx) ? 'Eyes closed?' : 'Face detected' }}</div>
               </div>
+            </div>
+          </div>
+
+          <!-- Blink Alert -->
+          <div v-if="item.blink_detected" class="blink-alert glass-panel">
+            <EyeOff :size="18" />
+            <div class="alert-content">
+              <span class="alert-title">Potential Blink Detected</span>
+              <span class="alert-desc">The AI detected closed eyes in this photo.</span>
             </div>
           </div>
           </div>
@@ -428,6 +438,15 @@ h1 {
   opacity: 0.8; /* Highlight on hover */
 }
 
+.face-box.has-blink {
+  border-color: #EF4444;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+}
+
+.face-box.has-blink .face-tag {
+  background: #EF4444;
+}
+
 .face-tag {
   position: absolute;
   bottom: 100%;
@@ -567,6 +586,34 @@ h1 {
   background: #FEE2E2;
   color: #DC2626;
   box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+}
+
+.blink-alert {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.1);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #EF4444;
+}
+
+.alert-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.alert-title {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.alert-desc {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.8;
 }
 
 .tech-info-row {

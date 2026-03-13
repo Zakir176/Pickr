@@ -120,6 +120,7 @@ def analyze_single_image(filename, contents, weights=None):
         # --- 1. Grayscale & Faces ---
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         faces = analysis.detect_faces(gray)
+        blink_detected, blink_indices = analysis.detect_blinks(gray, faces)
 
         # --- 2. Calculate Metrics ---
         blur_raw, used_faces = analysis.calculate_blur(gray, faces)
@@ -144,6 +145,10 @@ def analyze_single_image(filename, contents, weights=None):
             + (norm_color * weights.get("color", 0.1))
         )
 
+        # Apply Blink Penalty
+        if blink_detected:
+            final_score *= 0.8
+
         # --- 5. Recommendation ---
         recommendation = get_recommendation(final_score)
 
@@ -158,6 +163,8 @@ def analyze_single_image(filename, contents, weights=None):
                 {"x": int(x), "y": int(y), "w": int(w_f), "h": int(h_f)} 
                 for (x, y, w_f, h_f) in faces
             ] if faces is not None else [],
+            "blink_detected": blink_detected,
+            "blink_indices": blink_indices,
             "exif": exif,
             "composition": composition,
             "score_components": {
