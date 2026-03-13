@@ -1,5 +1,5 @@
 <script setup>
-import { ChevronLeft, Wand2, ChevronDown, Download, Check, X, RotateCcw, FolderDown, Heart, Bookmark } from 'lucide-vue-next';
+import { ChevronLeft, Wand2, ChevronDown, Download, Check, X, RotateCcw, FolderDown, Heart, Bookmark, EyeOff } from 'lucide-vue-next';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 
@@ -336,6 +336,10 @@ const handleTouchEnd = (e, item) => {
                           :status="item.error ? 'Error' : item.recommendation"
                           :error-message="item.error"
                         />
+                        <div v-if="item.blink_detected" class="blink-tag">
+                          <EyeOff :size="10" />
+                          <span>Blink</span>
+                        </div>
                         <BestShotBadge 
                           v-if="item.isBest && !isSelectionMode" 
                           :is-best="true" 
@@ -731,6 +735,23 @@ h1 {
   position: absolute;
   top: 10px;
   left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.blink-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #EF4444;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 
