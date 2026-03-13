@@ -1,10 +1,47 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
-import { Clock, HardDrive, Images, ChevronRight } from 'lucide-vue-next';
+import { Clock, HardDrive, Images, ChevronRight, Search, Filter } from 'lucide-vue-next';
 import { formatSize, formatDate } from '../utils';
 
 const historyItems = ref([]);
 const keepers = ref([]);
+const searchQuery = ref('');
+const dateFilter = ref('all');
+
+const filteredHistory = computed(() => {
+  let items = historyItems.value;
+  
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase();
+    items = items.filter(item => 
+      formatDate(item.date).toLowerCase().includes(q) || 
+      item.type.toLowerCase().includes(q)
+    );
+  }
+  
+  if (dateFilter.value !== 'all') {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    items = items.filter(item => {
+      const d = new Date(item.date);
+      if (dateFilter.value === 'today') return d >= today;
+      if (dateFilter.value === 'week') {
+        const weekAgo = new Date(today);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        return d >= weekAgo;
+      }
+      if (dateFilter.value === 'month') {
+        const monthAgo = new Date(today);
+        monthAgo.setMonth(monthAgo.getMonth() - 1);
+        return d >= monthAgo;
+      }
+      return true;
+    });
+  }
+  
+  return items;
+});
 
 const stats = computed(() => {
   const totalS = historyItems.value.reduce((acc, item) => {
@@ -94,13 +131,35 @@ const removeKeeper = (keeper) => {
           Clear All
         </button>
       </div>
+
+      <!-- Search and Filter -->
+      <div class="filter-bar" v-if="historyItems.length > 0">
+        <div class="search-input-wrapper glass-panel">
+          <Search :size="16" class="search-icon" />
+          <input 
+            v-model="searchQuery" 
+            type="text" 
+            placeholder="Search history..." 
+            class="search-input"
+          >
+        </div>
+        <div class="filter-select-wrapper glass-panel">
+          <Filter :size="16" class="filter-icon" />
+          <select v-model="dateFilter" class="filter-select">
+            <option value="all">All Time</option>
+            <option value="today">Today</option>
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+          </select>
+        </div>
+      </div>
       
       <div 
-        v-if="historyItems.length > 0"
+        v-if="filteredHistory.length > 0"
         class="history-list"
       >
         <div
-          v-for="item in historyItems"
+          v-for="item in filteredHistory"
           :key="item.id"
           class="history-item glass-panel"
         >
@@ -247,6 +306,53 @@ h3 {
   font-weight: 700;
   color: var(--primary-blue);
   padding: 4px 8px;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.search-input-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+}
+
+.search-input {
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  width: 100%;
+  outline: none;
+}
+
+.search-icon, .filter-icon {
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+.filter-select-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 12px;
+}
+
+.filter-select {
+  background: transparent;
+  border: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  outline: none;
 }
 
 .history-list {
