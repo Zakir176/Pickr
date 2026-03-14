@@ -1,5 +1,5 @@
 <script setup>
-import { ChevronLeft, Check, X, Heart, Maximize2, FileDigit, Columns, Bookmark, Camera, Info, EyeOff } from 'lucide-vue-next';
+import { ChevronLeft, Check, X, Heart, Maximize2, FileDigit, Columns, Bookmark, Camera, Info, EyeOff, Tag } from 'lucide-vue-next';
 import { ref, reactive, computed } from 'vue';
 import StatusBadge from './StatusBadge.vue';
 import BestShotBadge from './BestShotBadge.vue';
@@ -197,15 +197,18 @@ const handleTouchEnd = (e, item) => {
 
           <div class="info-row">
             <div class="metrics">
-              <span class="filename">{{ item.filename }}</span>
-              <div class="pills">
-                <span class="pill">Blur: {{ Math.round(item.score_components.blur * 100) }}%</span>
-                <span class="pill">Exp: {{ Math.round(item.score_components.exposure * 100) }}%</span>
-                <span v-if="item.metadata?.size" class="pill secondary">
-                  <FileDigit :size="10" /> {{ item.metadata.size }}
-                </span>
-              </div>
+            <span class="filename">{{ item.filename }}</span>
+            <div class="pills">
+              <span v-if="item.scene" class="pill scene-pill">
+                {{ item.scene }}
+              </span>
+              <span class="pill">Blur: {{ Math.round(item.score_components.blur * 100) }}%</span>
+              <span class="pill">Exp: {{ Math.round(item.score_components.exposure * 100) }}%</span>
+              <span v-if="item.metadata?.size" class="pill secondary">
+                <FileDigit :size="10" /> {{ item.metadata.size }}
+              </span>
             </div>
+          </div>
             
             <div class="actions">
               <button 
@@ -244,7 +247,13 @@ const handleTouchEnd = (e, item) => {
           </div>
 
           <!-- Technical Metadata & Composition -->
-          <div class="tech-info-row glass-panel" v-if="item.exif || item.composition">
+          <div class="tech-info-row glass-panel" v-if="item.exif || item.composition || item.tags?.length">
+            <div class="tech-section" v-if="item.tags?.length">
+              <Tag :size="14" class="tech-icon purple" />
+              <div class="tech-tags">
+                <span v-for="tag in item.tags" :key="tag" class="tech-tag purple-tag">{{ tag }}</span>
+              </div>
+            </div>
             <div class="tech-section" v-if="item.exif && Object.keys(item.exif).length > 0">
               <Camera :size="14" class="tech-icon" />
               <div class="tech-tags">
@@ -547,6 +556,11 @@ h1 {
   gap: 4px;
 }
 
+.pill.scene-pill {
+  background: rgba(139, 92, 246, 0.1);
+  color: #7C3AED;
+}
+
 .pill.secondary {
   background: rgba(59, 130, 246, 0.05);
   color: var(--primary-blue);
@@ -642,6 +656,11 @@ h1 {
   opacity: 1;
 }
 
+.tech-icon.purple {
+  color: #7C3AED;
+  opacity: 1;
+}
+
 .tech-tags {
   display: flex;
   flex-wrap: wrap;
@@ -655,6 +674,11 @@ h1 {
   background: rgba(0, 0, 0, 0.05);
   padding: 2px 8px;
   border-radius: 6px;
+}
+
+.tech-tag.purple-tag {
+  background: rgba(139, 92, 246, 0.1);
+  color: #7C3AED;
 }
 
 .tech-text {

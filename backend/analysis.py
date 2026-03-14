@@ -188,6 +188,68 @@ def calculate_composition(gray_img, faces=None):
     return {"score": round(float(score), 2), "description": description}
 
 
+def analyze_scene_and_tags(img_bgr, gray_img, faces=None):
+    """
+    Detects scene type and generates descriptive tags using heuristics.
+    Returns: { scene: str, tags: list[str] }
+    """
+    h, w = gray_img.shape
+    tags = []
+    scene = "Other"
+
+    # 1. Detect "People" and "Portrait"
+    if faces is not None and len(faces) > 0:
+        tags.append("People")
+        # Check if it's a "Portrait" (faces occupy > 10% of image area)
+        total_face_area = sum(wf * hf for (xf, yf, wf, hf) in faces)
+        if total_face_area / (h * w) > 0.1:
+            scene = "Portrait"
+            tags.append("Close-up")
+        else:
+            scene = "Group Shot" if len(faces) > 1 else "Portrait"
+
+    # 2. Color Analysis for "Nature" vs "Urban"
+    # Convert to HSV for better color segmentation
+    hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
+    
+    # Green (Nature/Foliage)
+    green_mask = cv2.inRange(hsv, (35, 20, 20), (85, 255, 255))
+    green_ratio = np.sum(green_mask > 0) / (h * w)
+    
+    # Blue (Sky/Water)
+    blue_mask = cv2.inRange(hsv, (90, 20, 20), (130, 255, 255))
+    blue_ratio = np.sum(blue_mask > 0) / (h * w)
+
+    if green_ratio > 0.15:
+        tags.append("Nature")
+    if blue_ratio > 0.15:
+        tags.append("Sky/Water")
+    
+    if (green_ratio + blue_ratio) > 0.3 and scene == "Other":
+        scene = "Landscape"
+
+    # 3. Edge Density for "Architecture/Urban"
+    edges = cv2.Canny(gray_img, 100, 200)
+    edge_ratio = np.sum(edges > 0) / (h * w)
+    if edge_ratio > 0.05:
+        tags.append("Detailed")
+        if scene == "Other" and green_ratio < 0.1:
+            scene = "Architecture"
+            tags.append("Urban")
+
+    # 4. Brightness/Contrast tags
+    brightness = np.mean(gray_img)
+    if brightness > 200:
+        tags.append("Bright")
+    elif brightness < 60:
+        tags.append("Low Light")
+
+    return {
+        "scene": scene,
+        "tags": list(set(tags)) # Unique tags
+    }
+
+
 def cluster_results(results, threshold=10):
     """
     Groups analysis results based on perceptual hash similarity.

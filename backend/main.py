@@ -129,6 +129,7 @@ def analyze_single_image(filename, contents, weights=None):
         color_raw = analysis.calculate_colorfulness(img)
         phash = analysis.calculate_phash(img)
         composition = analysis.calculate_composition(gray, faces)
+        scene_info = analysis.analyze_scene_and_tags(img, gray, faces)
         exif = extract_exif(pil_img)
 
         # --- 3. Normalize ---
@@ -165,6 +166,8 @@ def analyze_single_image(filename, contents, weights=None):
             ] if faces is not None else [],
             "blink_detected": blink_detected,
             "blink_indices": blink_indices,
+            "scene": scene_info["scene"],
+            "tags": scene_info["tags"],
             "exif": exif,
             "composition": composition,
             "score_components": {

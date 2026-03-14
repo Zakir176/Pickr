@@ -233,7 +233,9 @@ const handleToggleFavorite = async (item) => {
             score: target.final_score,
             date: new Date().toISOString(),
             phash: target.phash,
-            thumbnail: thumbnail // New field!
+            thumbnail: thumbnail,
+            scene: target.scene, // New field
+            tags: target.tags    // New field
           });
         }
       } else {
