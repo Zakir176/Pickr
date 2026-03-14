@@ -8,6 +8,16 @@ const keepers = ref([]);
 const searchQuery = ref('');
 const dateFilter = ref('all');
 
+const filteredKeepers = computed(() => {
+  if (!searchQuery.value) return keepers.value;
+  const q = searchQuery.value.toLowerCase();
+  return keepers.value.filter(k => 
+    k.filename.toLowerCase().includes(q) ||
+    (k.scene && k.scene.toLowerCase().includes(q)) ||
+    (k.tags && k.tags.some(t => t.toLowerCase().includes(q)))
+  );
+});
+
 const filteredHistory = computed(() => {
   let items = historyItems.value;
   
@@ -186,13 +196,16 @@ const removeKeeper = (keeper) => {
     </section>
 
     <section class="keepers-section">
-      <h3>The Keepers</h3>
+      <div class="section-header">
+        <h3>Recent Keepers</h3>
+        <span class="count">{{ filteredKeepers.length }} items</span>
+      </div>
       <div 
-        v-if="keepers.length > 0"
+        v-if="filteredKeepers.length > 0"
         class="keepers-grid"
       >
         <div
-          v-for="keeper in keepers"
+          v-for="keeper in filteredKeepers"
           :key="keeper.filename"
           class="keeper-card glass-panel"
         >
@@ -206,8 +219,14 @@ const removeKeeper = (keeper) => {
             <Images v-else :size="32" color="#3B82F6" />
           </div>
           <div class="keeper-info">
-            <span class="filename">{{ keeper.filename }}</span>
-            <span class="score">Score: {{ Math.round(keeper.score * 100) }}%</span>
+            <span class="keeper-name">{{ keeper.filename }}</span>
+            <div class="keeper-meta">
+              <span class="keeper-date">{{ formatDate(keeper.date) }}</span>
+              <span v-if="keeper.scene" class="keeper-scene">{{ keeper.scene }}</span>
+            </div>
+            <div v-if="keeper.tags?.length" class="keeper-tags">
+              <span v-for="tag in keeper.tags.slice(0, 2)" :key="tag" class="mini-tag">#{{ tag }}</span>
+            </div>
           </div>
           <button 
             class="remove-keeper" 
@@ -463,18 +482,52 @@ h3 {
   gap: 2px;
 }
 
-.keeper-info .filename {
-  font-size: 12px;
+.keeper-name {
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: block;
 }
 
-.keeper-info .score {
+.keeper-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.keeper-date {
   font-size: 10px;
+  font-weight: 600;
   color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.keeper-scene {
+  font-size: 10px;
+  font-weight: 700;
+  color: #7C3AED;
+  background: rgba(139, 92, 246, 0.1);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+.keeper-tags {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.mini-tag {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: rgba(0,0,0,0.05);
+  padding: 1px 4px;
+  border-radius: 4px;
 }
 
 .remove-keeper {
